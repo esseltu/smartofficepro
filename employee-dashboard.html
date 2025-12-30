@@ -117,8 +117,8 @@
             }
         });
 
-        function loadDashboardStats(userId) {
-            const tasks = api.getTasks(userId);
+        async function loadDashboardStats(userId) {
+            const tasks = await api.getTasks(userId);
             
             const pending = tasks.filter(t => t.status === 'To Do' || t.status === 'Pending').length;
             const inProgress = tasks.filter(t => t.status === 'In Progress').length;

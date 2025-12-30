@@ -109,11 +109,11 @@
             document.getElementById('endDate').min = today;
         });
 
-        function loadLeaveHistory() {
+        async function loadLeaveHistory() {
             const user = auth.getCurrentUser();
             if (!user) return;
 
-            const leaves = api.getLeaves(user.id);
+            const leaves = await api.getLeaves(user.id);
             
             const columns = [
                 { key: 'type' },
@@ -129,7 +129,7 @@
             ui.renderTable('leaveHistoryTable', leaves, columns);
         }
 
-        function handleLeaveSubmit(e) {
+        async function handleLeaveSubmit(e) {
             e.preventDefault();
             const user = auth.getCurrentUser();
             if (!user) return;
@@ -143,7 +143,7 @@
                 reason: document.getElementById('leaveReason').value
             };
 
-            api.applyLeave(leave);
+            await api.applyLeave(leave);
             
             // Reset form
             document.getElementById('leaveForm').reset();

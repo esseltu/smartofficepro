@@ -114,8 +114,8 @@
             loadEmployeesDropdown();
         });
 
-        function loadTasks() {
-            const tasks = api.getTasks();
+        async function loadTasks() {
+            const tasks = await api.getTasks();
             
             const columns = [
                 { key: 'title' },
@@ -175,7 +175,7 @@
             }
         }
 
-        function handleTaskSubmit(e) {
+        async function handleTaskSubmit(e) {
             e.preventDefault();
             const employees = db.get(DATA_KEYS.EMPLOYEES);
             const assigneeId = document.getElementById('taskAssignee').value;
@@ -196,14 +196,14 @@
                 if (existing) task.status = existing.status;
             }
 
-            api.saveTask(task);
+            await api.saveTask(task);
             ui.toggleModal('taskModal', false);
             loadTasks();
         }
 
-        function deleteTask(id) {
+        async function deleteTask(id) {
             if (confirm('Are you sure you want to delete this task?')) {
-                api.deleteTask(id);
+                await api.deleteTask(id);
                 loadTasks();
             }
         }

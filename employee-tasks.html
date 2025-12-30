@@ -87,11 +87,11 @@
             loadKanbanBoard();
         });
 
-        function loadKanbanBoard() {
+        async function loadKanbanBoard() {
             const user = auth.getCurrentUser();
             if (!user) return;
 
-            const tasks = api.getTasks(user.id);
+            const tasks = await api.getTasks(user.id);
             
             // Clear lists
             document.getElementById('list-todo').innerHTML = '';
@@ -174,7 +174,7 @@
             ev.dataTransfer.setData("text", id);
         }
 
-        function drop(ev, newStatus) {
+        async function drop(ev, newStatus) {
             ev.preventDefault();
             const id = ev.dataTransfer.getData("text");
             // Need to parse ID if it was passed as int, but dataTransfer is string
@@ -184,15 +184,15 @@
             // The event target might be the column div or its children.
             // We passed newStatus explicitly in the HTML ondrop call.
             
-            updateTaskStatus(parseInt(id), newStatus);
+            await updateTaskStatus(parseInt(id), newStatus);
         }
 
-        function moveTask(id, newStatus) {
-            updateTaskStatus(id, newStatus);
+        async function moveTask(id, newStatus) {
+            await updateTaskStatus(id, newStatus);
         }
 
-        function updateTaskStatus(id, newStatus) {
-            api.updateTaskStatus(id, newStatus);
+        async function updateTaskStatus(id, newStatus) {
+            await api.updateTaskStatus(id, newStatus);
             loadKanbanBoard();
         }
     </script>

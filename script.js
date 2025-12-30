@@ -207,18 +207,53 @@ const ui = {
     }
 };
 
-// Data Service for Tasks/Leaves (API Simulation)
+// Config for optional server sync
+const CONFIG = {
+    API_BASE: localStorage.getItem('smartoffice_api_base') || ''
+};
+
+// Simple fetch helpers with graceful fallback
+async function safeFetch(url, options = {}) {
+    try {
+        const res = await fetch(url, options);
+        if (!res.ok) throw new Error('Network response was not ok');
+        return await res.json();
+    } catch (e) {
+        return null;
+    }
+}
+
+// Data Service for Tasks/Leaves with server fallback
 const api = {
-    // TODO: Replace with real API calls
-    getTasks: (userId = null) => {
-        const tasks = db.get(DATA_KEYS.TASKS);
-        if (userId) {
-            return tasks.filter(t => t.assignedToId === userId);
+    getTasks: async (userId = null) => {
+        if (CONFIG.API_BASE) {
+            const qs = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+            const data = await safeFetch(`${CONFIG.API_BASE}/tasks${qs}`);
+            if (data) return data;
         }
+        const tasks = db.get(DATA_KEYS.TASKS);
+        if (userId) return tasks.filter(t => t.assignedToId === userId);
         return tasks;
     },
     
-    saveTask: (task) => {
+    saveTask: async (task) => {
+        if (CONFIG.API_BASE) {
+            if (task.id) {
+                const updated = await safeFetch(`${CONFIG.API_BASE}/tasks/${task.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(task)
+                });
+                if (updated) return updated;
+            } else {
+                const created = await safeFetch(`${CONFIG.API_BASE}/tasks`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(task)
+                });
+                if (created) return created;
+            }
+        }
         let tasks = db.get(DATA_KEYS.TASKS);
         if (task.id) {
             const index = tasks.findIndex(t => t.id === task.id);
@@ -229,46 +264,84 @@ const api = {
             tasks.push(task);
         }
         db.set(DATA_KEYS.TASKS, tasks);
+        return task;
     },
 
-    deleteTask: (id) => {
+    deleteTask: async (id) => {
+        if (CONFIG.API_BASE) {
+            const ok = await safeFetch(`${CONFIG.API_BASE}/tasks/${id}`, { method: 'DELETE' });
+            if (ok !== null) return true;
+        }
         let tasks = db.get(DATA_KEYS.TASKS);
         tasks = tasks.filter(t => t.id !== id);
         db.set(DATA_KEYS.TASKS, tasks);
+        return true;
     },
 
-    updateTaskStatus: (id, status) => {
+    updateTaskStatus: async (id, status) => {
+        if (CONFIG.API_BASE) {
+            const updated = await safeFetch(`${CONFIG.API_BASE}/tasks/${id}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            if (updated) return updated;
+        }
         let tasks = db.get(DATA_KEYS.TASKS);
         const task = tasks.find(t => t.id === id);
         if (task) {
             task.status = status;
             db.set(DATA_KEYS.TASKS, tasks);
+            return task;
         }
+        return null;
     },
 
-    getLeaves: (userId = null) => {
-        const leaves = db.get(DATA_KEYS.LEAVES);
-        if (userId) {
-            return leaves.filter(l => l.employeeId === userId);
+    getLeaves: async (userId = null) => {
+        if (CONFIG.API_BASE) {
+            const qs = userId ? `?employeeId=${encodeURIComponent(userId)}` : '';
+            const data = await safeFetch(`${CONFIG.API_BASE}/leaves${qs}`);
+            if (data) return data;
         }
+        const leaves = db.get(DATA_KEYS.LEAVES);
+        if (userId) return leaves.filter(l => l.employeeId === userId);
         return leaves;
     },
 
-    applyLeave: (leave) => {
+    applyLeave: async (leave) => {
+        if (CONFIG.API_BASE) {
+            const created = await safeFetch(`${CONFIG.API_BASE}/leaves`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(leave)
+            });
+            if (created) return created;
+        }
         let leaves = db.get(DATA_KEYS.LEAVES);
         leave.id = Date.now();
         leave.status = 'Pending';
         leaves.push(leave);
         db.set(DATA_KEYS.LEAVES, leaves);
+        return leave;
     },
 
-    updateLeaveStatus: (id, status) => {
+    updateLeaveStatus: async (id, status) => {
+        if (CONFIG.API_BASE) {
+            const updated = await safeFetch(`${CONFIG.API_BASE}/leaves/${id}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            if (updated) return updated;
+        }
         let leaves = db.get(DATA_KEYS.LEAVES);
         const leave = leaves.find(l => l.id === id);
         if (leave) {
             leave.status = status;
             db.set(DATA_KEYS.LEAVES, leaves);
+            return leave;
         }
+        return null;
     }
 };
 

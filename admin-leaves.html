@@ -70,8 +70,8 @@
             loadLeaves();
         });
 
-        function loadLeaves() {
-            const leaves = api.getLeaves();
+        async function loadLeaves() {
+            const leaves = await api.getLeaves();
             
             const columns = [
                 { key: 'name' },
@@ -100,9 +100,9 @@
             });
         }
 
-        function updateStatus(id, status) {
+        async function updateStatus(id, status) {
             if (confirm(`Are you sure you want to ${status.toLowerCase()} this leave request?`)) {
-                api.updateLeaveStatus(id, status);
+                await api.updateLeaveStatus(id, status);
                 loadLeaves();
             }
         }
