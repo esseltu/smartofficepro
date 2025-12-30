@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apply Leave - SmartOffice Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-building"></i>
+                <span>SmartOffice Pro</span>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="employee-dashboard.html"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="employee-tasks.html"><i class="fas fa-tasks"></i> My Tasks</a></li>
+                <li><a href="employee-leave.html" class="active"><i class="fas fa-calendar-plus"></i> Apply Leave</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <button class="menu-toggle"><i class="fas fa-bars"></i></button>
+                <div class="user-info">
+                    <span>Employee User</span>
+                    <img src="" alt="Profile">
+                    <button onclick="auth.logout()" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                <div class="page-header">
+                    <h2>Leave Management</h2>
+                </div>
+
+                <div class="row" style="display: flex; gap: 20px; flex-wrap: wrap;">
+                    <!-- Apply Leave Form -->
+                    <div class="card" style="flex: 1; min-width: 300px;">
+                        <div class="card-header">
+                            <h3>Apply for Leave</h3>
+                        </div>
+                        <form id="leaveForm" onsubmit="handleLeaveSubmit(event)">
+                            <div class="form-group">
+                                <label>Leave Type</label>
+                                <select id="leaveType" class="form-control" required>
+                                    <option value="">Select Type</option>
+                                    <option value="Sick Leave">Sick Leave</option>
+                                    <option value="Casual Leave">Casual Leave</option>
+                                    <option value="Vacation">Vacation</option>
+                                    <option value="Emergency">Emergency</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Start Date</label>
+                                <input type="date" id="startDate" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label>End Date</label>
+                                <input type="date" id="endDate" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Reason</label>
+                                <textarea id="leaveReason" class="form-control" rows="3" placeholder="Reason for leave..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="width: 100%;">Submit Request</button>
+                        </form>
+                    </div>
+
+                    <!-- Leave History -->
+                    <div class="card" style="flex: 2; min-width: 300px;">
+                        <div class="card-header">
+                            <h3>My Leave History</h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table id="leaveHistoryTable" class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Dates</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Loaded via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            auth.checkAuth('employee');
+            loadLeaveHistory();
+            
+            // Set min date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('startDate').min = today;
+            document.getElementById('endDate').min = today;
+        });
+
+        function loadLeaveHistory() {
+            const user = auth.getCurrentUser();
+            if (!user) return;
+
+            const leaves = api.getLeaves(user.id);
+            
+            const columns = [
+                { key: 'type' },
+                { key: 'startDate', render: (val, item) => `${item.startDate} to ${item.endDate}` },
+                { key: 'status', render: (val) => {
+                    let badgeClass = 'badge-warning';
+                    if (val === 'Approved') badgeClass = 'badge-success';
+                    if (val === 'Rejected') badgeClass = 'badge-danger';
+                    return `<span class="badge ${badgeClass}">${val}</span>`;
+                }}
+            ];
+
+            ui.renderTable('leaveHistoryTable', leaves, columns);
+        }
+
+        function handleLeaveSubmit(e) {
+            e.preventDefault();
+            const user = auth.getCurrentUser();
+            if (!user) return;
+
+            const leave = {
+                employeeId: user.id,
+                name: user.name,
+                type: document.getElementById('leaveType').value,
+                startDate: document.getElementById('startDate').value,
+                endDate: document.getElementById('endDate').value,
+                reason: document.getElementById('leaveReason').value
+            };
+
+            api.applyLeave(leave);
+            
+            // Reset form
+            document.getElementById('leaveForm').reset();
+            alert('Leave application submitted successfully!');
+            
+            loadLeaveHistory();
+        }
+    </script>
+</body>
+</html>

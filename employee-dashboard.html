@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Dashboard - SmartOffice Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-building"></i>
+                <span>SmartOffice Pro</span>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="employee-dashboard.html" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="employee-tasks.html"><i class="fas fa-tasks"></i> My Tasks</a></li>
+                <li><a href="employee-leave.html"><i class="fas fa-calendar-plus"></i> Apply Leave</a></li>
+                <!-- <li><a href="#"><i class="fas fa-user"></i> My Profile</a></li> -->
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <button class="menu-toggle"><i class="fas fa-bars"></i></button>
+                <div class="user-info">
+                    <span>Employee User</span>
+                    <img src="" alt="Profile">
+                    <button onclick="auth.logout()" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                <div class="page-header">
+                    <h2 id="welcomeMsg">Welcome back!</h2>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: rgba(48, 209, 88, 0.15); color: var(--emp-primary);">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="pendingTasksCount">0</h3>
+                            <p>Pending Tasks</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: rgba(255, 204, 0, 0.15); color: var(--warning-color);">
+                            <i class="fas fa-spinner"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="inProgressCount">0</h3>
+                            <p>In Progress</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: rgba(52, 199, 89, 0.15); color: var(--success-color);">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="completedCount">0</h3>
+                            <p>Completed Tasks</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: rgba(0, 122, 255, 0.15); color: var(--primary-color);">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="leaveBalance">12</h3>
+                            <p>Leave Balance</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-header">
+                        <h3>Recent Tasks</h3>
+                        <a href="employee-tasks.html" class="btn btn-sm btn-primary">View Board</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table id="recentTasksTable" class="table">
+                            <thead>
+                                <tr>
+                                    <th>Task</th>
+                                    <th>Due Date</th>
+                                    <th>Priority</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Loaded via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            auth.checkAuth('employee');
+            
+            const user = auth.getCurrentUser();
+            if (user) {
+                document.getElementById('welcomeMsg').textContent = `Welcome back, ${user.name.split(' ')[0]}!`;
+                loadDashboardStats(user.id);
+            }
+        });
+
+        function loadDashboardStats(userId) {
+            const tasks = api.getTasks(userId);
+            
+            const pending = tasks.filter(t => t.status === 'To Do' || t.status === 'Pending').length;
+            const inProgress = tasks.filter(t => t.status === 'In Progress').length;
+            const completed = tasks.filter(t => t.status === 'Completed').length;
+
+            document.getElementById('pendingTasksCount').textContent = pending;
+            document.getElementById('inProgressCount').textContent = inProgress;
+            document.getElementById('completedCount').textContent = completed;
+            
+            // Mock leave balance for now
+            document.getElementById('leaveBalance').textContent = '12 Days';
+
+            // Recent Tasks
+            const recentTasks = tasks.slice(0, 5);
+            const columns = [
+                { key: 'title' },
+                { key: 'dueDate' },
+                { key: 'priority', render: (val) => {
+                    let color = '#6c757d';
+                    if (val === 'High') color = '#dc3545';
+                    if (val === 'Medium') color = '#ffc107';
+                    return `<span style="color: ${color}; font-weight: 600;">${val}</span>`;
+                }},
+                { key: 'status', render: (val) => {
+                    let badgeClass = 'badge-secondary';
+                    if (val === 'Completed') badgeClass = 'badge-success';
+                    if (val === 'In Progress') badgeClass = 'badge-primary';
+                    return `<span class="badge ${badgeClass}">${val}</span>`;
+                }}
+            ];
+            
+            ui.renderTable('recentTasksTable', recentTasks, columns);
+        }
+    </script>
+</body>
+</html>

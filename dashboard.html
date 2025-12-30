@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - SmartOffice Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-building fa-lg"></i>
+                <h3>SmartOffice</h3>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li><a href="employees.html"><i class="fas fa-users"></i> Employees</a></li>
+                <li><a href="attendance.html"><i class="fas fa-clock"></i> Attendance</a></li>
+                <li><a href="leaves.html"><i class="fas fa-calendar-minus"></i> Leaves</a></li>
+                <li><a href="tasks.html"><i class="fas fa-tasks"></i> Tasks</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <header>
+                <div class="menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </div>
+                <div class="user-info">
+                    <span>Admin User</span>
+                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=0D8ABC&color=fff" alt="Admin">
+                </div>
+            </header>
+
+            <div class="content">
+                <h2>Dashboard Overview</h2>
+                <p class="text-muted" style="margin-bottom: 20px;">Welcome back, Admin</p>
+
+                <!-- Stats Cards -->
+                <div class="cards-grid">
+                    <div class="card">
+                        <div class="card-info">
+                            <h3 id="totalEmployees">0</h3>
+                            <p>Total Employees</p>
+                        </div>
+                        <div class="card-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-info">
+                            <h3 id="presentToday">0</h3>
+                            <p>Present Today</p>
+                        </div>
+                        <div class="card-icon">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-info">
+                            <h3 id="pendingLeaves">0</h3>
+                            <p>Pending Leaves</p>
+                        </div>
+                        <div class="card-icon">
+                            <i class="fas fa-envelope-open-text"></i>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-info">
+                            <h3 id="activeTasks">0</h3>
+                            <p>Active Tasks</p>
+                        </div>
+                        <div class="card-icon">
+                            <i class="fas fa-list-ul"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h4>Department Distribution</h4>
+                        <canvas id="deptChart" height="250"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h4>Task Status</h4>
+                        <canvas id="taskChart" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboardStats();
+            drawCharts();
+        });
+
+        function loadDashboardStats() {
+            const employees = db.get(DATA_KEYS.EMPLOYEES);
+            const attendance = db.get(DATA_KEYS.ATTENDANCE);
+            const leaves = db.get(DATA_KEYS.LEAVES);
+            const tasks = db.get(DATA_KEYS.TASKS);
+
+            document.getElementById('totalEmployees').textContent = employees.length;
+            
+            // Count present today (mock logic: check for today's date in attendance)
+            // Since mock data might be old, we'll just count total attendance records for the last logged date or just random valid ones for demo
+            const todayStr = new Date().toISOString().split('T')[0];
+            // For demo purposes, let's just count all 'Present' status in the mock data or match today if we were real
+            const presentCount = attendance.filter(a => a.status === 'Present').length; 
+            document.getElementById('presentToday').textContent = presentCount;
+
+            const pendingLeaves = leaves.filter(l => l.status === 'Pending').length;
+            document.getElementById('pendingLeaves').textContent = pendingLeaves;
+
+            const activeTasks = tasks.filter(t => t.status !== 'Completed').length;
+            document.getElementById('activeTasks').textContent = activeTasks;
+        }
+
+        function drawCharts() {
+            const employees = db.get(DATA_KEYS.EMPLOYEES);
+            const tasks = db.get(DATA_KEYS.TASKS);
+
+            // Dept Data
+            const depts = {};
+            employees.forEach(e => depts[e.dept] = (depts[e.dept] || 0) + 1);
+            
+            // Task Data
+            const taskStatus = {};
+            tasks.forEach(t => taskStatus[t.status] = (taskStatus[t.status] || 0) + 1);
+
+            drawBarChart('deptChart', depts, 'Departments');
+            drawPieChart('taskChart', taskStatus);
+        }
+
+        function drawBarChart(canvasId, data, label) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            // Adjust for high DPI
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+
+            const keys = Object.keys(data);
+            const values = Object.values(data);
+            const maxVal = Math.max(...values, 5); // min 5 for scale
+            
+            const padding = 40;
+            const barWidth = (rect.width - padding * 2) / keys.length - 10;
+            const chartHeight = rect.height - padding * 2;
+
+            ctx.fillStyle = '#007bff';
+            ctx.font = '12px Roboto';
+            
+            keys.forEach((key, i) => {
+                const val = values[i];
+                const barHeight = (val / maxVal) * chartHeight;
+                const x = padding + i * (barWidth + 10);
+                const y = rect.height - padding - barHeight;
+
+                ctx.fillRect(x, y, barWidth, barHeight);
+                
+                // Label
+                ctx.fillStyle = '#333';
+                ctx.fillText(key, x, rect.height - padding + 15);
+                ctx.fillText(val, x + barWidth/2 - 5, y - 5);
+                ctx.fillStyle = '#007bff';
+            });
+            
+            // Axis lines
+            ctx.strokeStyle = '#ccc';
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, rect.height - padding);
+            ctx.lineTo(rect.width - padding, rect.height - padding);
+            ctx.stroke();
+        }
+
+        function drawPieChart(canvasId, data) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+
+            const keys = Object.keys(data);
+            const values = Object.values(data);
+            const total = values.reduce((a, b) => a + b, 0);
+            
+            let startAngle = 0;
+            const colors = ['#28a745', '#ffc107', '#dc3545', '#17a2b8'];
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            const radius = Math.min(centerX, centerY) - 40;
+
+            keys.forEach((key, i) => {
+                const sliceAngle = (values[i] / total) * 2 * Math.PI;
+                
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.fill();
+                
+                // Legend
+                const legendX = rect.width - 100;
+                const legendY = 40 + i * 20;
+                ctx.fillRect(legendX, legendY, 10, 10);
+                ctx.fillStyle = '#333';
+                ctx.fillText(`${key} (${values[i]})`, legendX + 15, legendY + 10);
+                ctx.fillStyle = colors[i % colors.length];
+
+                startAngle += sliceAngle;
+            });
+        }
+    </script>
+</body>
+</html>

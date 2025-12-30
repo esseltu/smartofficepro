@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Tasks - SmartOffice Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-building"></i>
+                <span>SmartOffice Pro</span>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="employee-dashboard.html"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="employee-tasks.html" class="active"><i class="fas fa-tasks"></i> My Tasks</a></li>
+                <li><a href="employee-leave.html"><i class="fas fa-calendar-plus"></i> Apply Leave</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <button class="menu-toggle"><i class="fas fa-bars"></i></button>
+                <div class="user-info">
+                    <span>Employee User</span>
+                    <img src="" alt="Profile">
+                    <button onclick="auth.logout()" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                <div class="page-header">
+                    <h2>My Tasks Board</h2>
+                    <div class="header-actions">
+                        <span class="text-muted"><i class="fas fa-info-circle"></i> Drag and drop cards to change status</span>
+                    </div>
+                </div>
+
+                <div class="kanban-board">
+                    <!-- To Do Column -->
+                    <div class="kanban-column" id="todo-column" ondrop="drop(event, 'To Do')" ondragover="allowDrop(event)">
+                        <div class="kanban-header">
+                            <h4>To Do</h4>
+                            <span class="badge badge-secondary" id="count-todo">0</span>
+                        </div>
+                        <div class="kanban-items" id="list-todo">
+                            <!-- Tasks injected here -->
+                        </div>
+                    </div>
+
+                    <!-- In Progress Column -->
+                    <div class="kanban-column" id="progress-column" ondrop="drop(event, 'In Progress')" ondragover="allowDrop(event)">
+                        <div class="kanban-header">
+                            <h4>In Progress</h4>
+                            <span class="badge badge-primary" id="count-progress">0</span>
+                        </div>
+                        <div class="kanban-items" id="list-progress">
+                            <!-- Tasks injected here -->
+                        </div>
+                    </div>
+
+                    <!-- Completed Column -->
+                    <div class="kanban-column" id="completed-column" ondrop="drop(event, 'Completed')" ondragover="allowDrop(event)">
+                        <div class="kanban-header">
+                            <h4>Completed</h4>
+                            <span class="badge badge-success" id="count-completed">0</span>
+                        </div>
+                        <div class="kanban-items" id="list-completed">
+                            <!-- Tasks injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            auth.checkAuth('employee');
+            loadKanbanBoard();
+        });
+
+        function loadKanbanBoard() {
+            const user = auth.getCurrentUser();
+            if (!user) return;
+
+            const tasks = api.getTasks(user.id);
+            
+            // Clear lists
+            document.getElementById('list-todo').innerHTML = '';
+            document.getElementById('list-progress').innerHTML = '';
+            document.getElementById('list-completed').innerHTML = '';
+
+            let counts = { 'To Do': 0, 'In Progress': 0, 'Completed': 0 };
+
+            tasks.forEach(task => {
+                const card = createKanbanCard(task);
+                
+                // Map status to column
+                // Default to 'To Do' if status is unknown or Pending
+                let status = task.status;
+                if (status === 'Pending') status = 'To Do';
+                
+                if (status === 'To Do') {
+                    document.getElementById('list-todo').appendChild(card);
+                    counts['To Do']++;
+                } else if (status === 'In Progress') {
+                    document.getElementById('list-progress').appendChild(card);
+                    counts['In Progress']++;
+                } else if (status === 'Completed') {
+                    document.getElementById('list-completed').appendChild(card);
+                    counts['Completed']++;
+                }
+            });
+
+            // Update counts
+            document.getElementById('count-todo').textContent = counts['To Do'];
+            document.getElementById('count-progress').textContent = counts['In Progress'];
+            document.getElementById('count-completed').textContent = counts['Completed'];
+        }
+
+        function createKanbanCard(task) {
+            const div = document.createElement('div');
+            div.className = 'kanban-card';
+            div.draggable = true;
+            div.ondragstart = (e) => drag(e, task.id);
+            div.id = `task-${task.id}`;
+
+            let priorityClass = 'priority-low';
+            if (task.priority === 'High') priorityClass = 'priority-high';
+            if (task.priority === 'Medium') priorityClass = 'priority-medium';
+
+            div.innerHTML = `
+                <div class="kanban-card-title">${task.title}</div>
+                <div class="kanban-card-meta">
+                    <span class="kanban-priority ${priorityClass}">${task.priority}</span>
+                    <span><i class="far fa-calendar"></i> ${task.dueDate}</span>
+                </div>
+                <div class="kanban-actions">
+                     ${getButtonsForStatus(task.status, task.id)}
+                </div>
+            `;
+            return div;
+        }
+
+        function getButtonsForStatus(status, id) {
+            // Helper buttons for mobile or non-drag users
+            if (status === 'Pending' || status === 'To Do') {
+                return `<button class="btn-icon" onclick="moveTask(${id}, 'In Progress')" title="Start"><i class="fas fa-play"></i></button>`;
+            } else if (status === 'In Progress') {
+                return `
+                    <button class="btn-icon" onclick="moveTask(${id}, 'To Do')" title="Back"><i class="fas fa-undo"></i></button>
+                    <button class="btn-icon" onclick="moveTask(${id}, 'Completed')" title="Complete"><i class="fas fa-check"></i></button>
+                `;
+            } else if (status === 'Completed') {
+                return `<button class="btn-icon" onclick="moveTask(${id}, 'In Progress')" title="Reopen"><i class="fas fa-redo"></i></button>`;
+            }
+            return '';
+        }
+
+        // Drag and Drop Functions
+        function allowDrop(ev) {
+            ev.preventDefault();
+        }
+
+        function drag(ev, id) {
+            ev.dataTransfer.setData("text", id);
+        }
+
+        function drop(ev, newStatus) {
+            ev.preventDefault();
+            const id = ev.dataTransfer.getData("text");
+            // Need to parse ID if it was passed as int, but dataTransfer is string
+            // api.updateTaskStatus expects ID.
+            
+            // Check if dropped on the column or a child
+            // The event target might be the column div or its children.
+            // We passed newStatus explicitly in the HTML ondrop call.
+            
+            updateTaskStatus(parseInt(id), newStatus);
+        }
+
+        function moveTask(id, newStatus) {
+            updateTaskStatus(id, newStatus);
+        }
+
+        function updateTaskStatus(id, newStatus) {
+            api.updateTaskStatus(id, newStatus);
+            loadKanbanBoard();
+        }
+    </script>
+</body>
+</html>

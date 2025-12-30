@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance - SmartOffice Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-building fa-lg"></i>
+                <h3>SmartOffice</h3>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li><a href="employees.html"><i class="fas fa-users"></i> Employees</a></li>
+                <li><a href="attendance.html"><i class="fas fa-clock"></i> Attendance</a></li>
+                <li><a href="leaves.html"><i class="fas fa-calendar-minus"></i> Leaves</a></li>
+                <li><a href="tasks.html"><i class="fas fa-tasks"></i> Tasks</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <header>
+                <div class="menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </div>
+                <div class="user-info">
+                    <span>Admin User</span>
+                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=0D8ABC&color=fff" alt="Admin">
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="table-header">
+                    <h2>Attendance Records</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="searchInput" class="form-control" placeholder="Search employee..." style="width: 200px;">
+                        <button class="btn btn-primary" onclick="openModal()">
+                            <i class="fas fa-plus"></i> Mark Attendance
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="attendanceTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Employee</th>
+                                <th>Status</th>
+                                <th>Time In</th>
+                                <th>Time Out</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mark Attendance Modal -->
+    <div id="attendanceModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="toggleModal('attendanceModal', false)">&times;</span>
+            <h3 style="margin-bottom: 20px;">Mark Attendance</h3>
+            <form id="attendanceForm">
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="attDate" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Employee</label>
+                    <select id="attEmployee" class="form-control" required>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="attStatus" class="form-control" onchange="toggleTimeFields()" required>
+                        <option value="Present">Present</option>
+                        <option value="Absent">Absent</option>
+                        <option value="Late">Late</option>
+                    </select>
+                </div>
+                <div class="form-group time-field">
+                    <label>Time In</label>
+                    <input type="time" id="attTimeIn" class="form-control">
+                </div>
+                <div class="form-group time-field">
+                    <label>Time Out</label>
+                    <input type="time" id="attTimeOut" class="form-control">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Save Record</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAttendance();
+            populateEmployeeSelect();
+            
+            // Set default date to today
+            document.getElementById('attDate').valueAsDate = new Date();
+
+            document.getElementById('attendanceForm').addEventListener('submit', handleFormSubmit);
+            document.getElementById('searchInput').addEventListener('input', (e) => loadAttendance(e.target.value));
+        });
+
+        function loadAttendance(search = '') {
+            let attendance = db.get(DATA_KEYS.ATTENDANCE);
+            
+            if (search) {
+                const term = search.toLowerCase();
+                attendance = attendance.filter(a => a.name.toLowerCase().includes(term));
+            }
+
+            // Sort by date desc
+            attendance.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const columns = [
+                { key: 'date' },
+                { key: 'name' },
+                { key: 'status', render: (val) => {
+                    let color = 'success';
+                    if (val === 'Absent') color = 'danger';
+                    if (val === 'Late') color = 'warning';
+                    return `<span class="badge badge-${color}">${val}</span>`;
+                }},
+                { key: 'timeIn' },
+                { key: 'timeOut' }
+            ];
+
+            renderTable('attendanceTable', attendance, columns, (item) => {
+                 // Using a unique composite key for deletion or just index if we had one. 
+                 // Since we don't have unique ID for attendance in mock, let's just assume we can't easily delete individually 
+                 // or we generate a temp ID. For simplicity, let's omit delete for this demo or match by properties.
+                 return `<button class="btn btn-sm btn-danger" onclick="deleteAttendance('${item.date}', '${item.employeeId}')"><i class="fas fa-trash"></i></button>`;
+            });
+        }
+
+        function populateEmployeeSelect() {
+            const employees = db.get(DATA_KEYS.EMPLOYEES);
+            const select = document.getElementById('attEmployee');
+            select.innerHTML = '';
+            employees.forEach(e => {
+                const option = document.createElement('option');
+                option.value = e.id;
+                option.textContent = `${e.name} (${e.id})`;
+                select.appendChild(option);
+            });
+        }
+
+        function toggleTimeFields() {
+            const status = document.getElementById('attStatus').value;
+            const fields = document.querySelectorAll('.time-field');
+            fields.forEach(f => {
+                f.style.display = status === 'Absent' ? 'none' : 'block';
+            });
+        }
+
+        function openModal() {
+            toggleModal('attendanceModal', true);
+        }
+
+        function deleteAttendance(date, empId) {
+            if (confirm('Delete this record?')) {
+                let attendance = db.get(DATA_KEYS.ATTENDANCE);
+                // Filter out the specific record
+                attendance = attendance.filter(a => !(a.date === date && a.employeeId === empId));
+                db.set(DATA_KEYS.ATTENDANCE, attendance);
+                loadAttendance();
+            }
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const date = document.getElementById('attDate').value;
+            const empId = document.getElementById('attEmployee').value;
+            const status = document.getElementById('attStatus').value;
+            const timeIn = document.getElementById('attTimeIn').value || '-';
+            const timeOut = document.getElementById('attTimeOut').value || '-';
+            
+            const employees = db.get(DATA_KEYS.EMPLOYEES);
+            const emp = employees.find(e => e.id === empId);
+
+            let attendance = db.get(DATA_KEYS.ATTENDANCE);
+            
+            // Check duplicate for same day
+            if (attendance.some(a => a.date === date && a.employeeId === empId)) {
+                alert('Attendance already marked for this employee on this date.');
+                return;
+            }
+
+            attendance.push({
+                date,
+                employeeId: empId,
+                name: emp ? emp.name : 'Unknown',
+                status,
+                timeIn: status === 'Absent' ? '-' : timeIn,
+                timeOut: status === 'Absent' ? '-' : timeOut
+            });
+
+            db.set(DATA_KEYS.ATTENDANCE, attendance);
+            toggleModal('attendanceModal', false);
+            loadAttendance();
+            showNotification('Attendance marked');
+        }
+    </script>
+</body>
+</html>

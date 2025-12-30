@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - SmartOffice Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="login-body">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <i class="fas fa-building" style="font-size: 3rem; color: var(--primary-color); margin-bottom: 20px;"></i>
+                <h2>SmartOffice Pro</h2>
+                <p>Enter your credentials to access</p>
+            </div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Login As</label>
+                    <select id="role" class="form-control" onchange="toggleLoginHint()" required>
+                        <option value="admin">Admin</option>
+                        <option value="employee">Employee</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="username" class="form-control" placeholder="Username / Email / ID" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="password" class="form-control" placeholder="Password" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Login</button>
+            </form>
+            <p id="loginHint" style="margin-top: 20px; font-size: 0.8rem; color: var(--text-secondary);">
+                Admin Demo: admin / admin123
+            </p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // Redirect if already logged in
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = auth.getCurrentUser();
+            if (user) {
+                if (user.role === 'admin') window.location.href = 'admin-dashboard.html';
+                if (user.role === 'employee') window.location.href = 'employee-dashboard.html';
+            }
+        });
+
+        function toggleLoginHint() {
+            const role = document.getElementById('role').value;
+            const hint = document.getElementById('loginHint');
+            if (role === 'admin') {
+                hint.textContent = 'Admin Demo: admin / admin123';
+            } else {
+                hint.textContent = 'Employee Demo: john@smartoffice.com / employee123';
+            }
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const role = document.getElementById('role').value;
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            
+            const result = auth.login(user, pass, role);
+            
+            if (result.success) {
+                window.location.href = result.redirect;
+            } else {
+                alert(result.message || 'Login failed');
+            }
+        });
+    </script>
+</body>
+</html>

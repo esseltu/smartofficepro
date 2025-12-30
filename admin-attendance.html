@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance - SmartOffice Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-building"></i>
+                <span>SmartOffice Pro</span>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="admin-dashboard.html"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+                <li><a href="admin-employees.html"><i class="fas fa-users"></i> Employees</a></li>
+                <li><a href="admin-attendance.html" class="active"><i class="fas fa-clock"></i> Attendance</a></li>
+                <li><a href="admin-leaves.html"><i class="fas fa-calendar-alt"></i> Leaves</a></li>
+                <li><a href="admin-tasks.html"><i class="fas fa-tasks"></i> Tasks</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <button class="menu-toggle"><i class="fas fa-bars"></i></button>
+                <div class="user-info">
+                    <span>Admin User</span>
+                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=0D8ABC&color=fff" alt="Profile">
+                    <button onclick="auth.logout()" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                <div class="page-header">
+                    <h2>Attendance Management</h2>
+                    <div class="header-actions">
+                        <input type="date" id="dateFilter" class="form-control" style="width: auto; display: inline-block;">
+                        <button class="btn btn-primary" onclick="loadAttendance()">
+                            <i class="fas fa-filter"></i> Filter
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="table-responsive">
+                        <table id="attendanceTable" class="table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Employee</th>
+                                    <th>Status</th>
+                                    <th>Time In</th>
+                                    <th>Time Out</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Attendance loaded via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            auth.checkAuth('admin');
+            
+            // Set today's date in filter
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('dateFilter').value = today;
+            
+            loadAttendance();
+        });
+
+        function loadAttendance() {
+            const dateFilter = document.getElementById('dateFilter').value;
+            const allAttendance = db.get(DATA_KEYS.ATTENDANCE);
+            
+            // Filter by date if selected, otherwise show all
+            let filteredData = allAttendance;
+            if (dateFilter) {
+                filteredData = allAttendance.filter(a => a.date === dateFilter);
+            }
+
+            // If no data for this date, show empty or mock some for demo if it's the specific mock date
+            // But better to just show what's in DB.
+            
+            // Note: In a real app, we would join with employee table to get names if not stored.
+            // Our mock data already has names.
+
+            const columns = [
+                { key: 'date' },
+                { key: 'name' },
+                { key: 'status', render: (val) => {
+                    let badgeClass = 'badge-success';
+                    if (val === 'Absent') badgeClass = 'badge-danger';
+                    if (val === 'Late') badgeClass = 'badge-warning';
+                    return `<span class="badge ${badgeClass}">${val}</span>`;
+                }},
+                { key: 'timeIn' },
+                { key: 'timeOut' }
+            ];
+
+            ui.renderTable('attendanceTable', filteredData, columns);
+        }
+    </script>
+</body>
+</html>

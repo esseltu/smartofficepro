@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaves - SmartOffice Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-building"></i>
+                <span>SmartOffice Pro</span>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="admin-dashboard.html"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+                <li><a href="admin-employees.html"><i class="fas fa-users"></i> Employees</a></li>
+                <li><a href="admin-attendance.html"><i class="fas fa-clock"></i> Attendance</a></li>
+                <li><a href="admin-leaves.html" class="active"><i class="fas fa-calendar-alt"></i> Leaves</a></li>
+                <li><a href="admin-tasks.html"><i class="fas fa-tasks"></i> Tasks</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <button class="menu-toggle"><i class="fas fa-bars"></i></button>
+                <div class="user-info">
+                    <span>Admin User</span>
+                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=0D8ABC&color=fff" alt="Profile">
+                    <button onclick="auth.logout()" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                <div class="page-header">
+                    <h2>Leave Requests</h2>
+                </div>
+
+                <div class="card">
+                    <div class="table-responsive">
+                        <table id="leavesTable" class="table">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Type</th>
+                                    <th>Dates</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Leaves loaded via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            auth.checkAuth('admin');
+            loadLeaves();
+        });
+
+        function loadLeaves() {
+            const leaves = api.getLeaves();
+            
+            const columns = [
+                { key: 'name' },
+                { key: 'type' },
+                { key: 'startDate', render: (val, item) => `${item.startDate} to ${item.endDate}` },
+                { key: 'status', render: (val) => {
+                    let badgeClass = 'badge-warning';
+                    if (val === 'Approved') badgeClass = 'badge-success';
+                    if (val === 'Rejected') badgeClass = 'badge-danger';
+                    return `<span class="badge ${badgeClass}">${val}</span>`;
+                }}
+            ];
+
+            ui.renderTable('leavesTable', leaves, columns, (item) => {
+                if (item.status === 'Pending') {
+                    return `
+                        <button class="btn-icon" onclick="updateStatus(${item.id}, 'Approved')" title="Approve" style="color: var(--success-color)">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn-icon" onclick="updateStatus(${item.id}, 'Rejected')" title="Reject" style="color: var(--danger-color)">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                }
+                return '';
+            });
+        }
+
+        function updateStatus(id, status) {
+            if (confirm(`Are you sure you want to ${status.toLowerCase()} this leave request?`)) {
+                api.updateLeaveStatus(id, status);
+                loadLeaves();
+            }
+        }
+    </script>
+</body>
+</html>
