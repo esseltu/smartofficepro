@@ -4,45 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - SmartOffice Pro</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="wrapper">
-        <!-- Sidebar -->
-        <nav class="sidebar">
+    <div class="dashboard-container">
+        <aside class="sidebar">
             <div class="sidebar-header">
-                <i class="fas fa-building fa-lg"></i>
-                <h3>SmartOffice</h3>
+                <i class="fas fa-building"></i>
+                <span>SmartOffice Pro</span>
             </div>
             <ul class="sidebar-menu">
-                <li><a href="admin-dashboard.html" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li><a href="admin-dashboard.html" class="active"><i class="fas fa-chart-line"></i> Dashboard</a></li>
                 <li><a href="admin-employees.html"><i class="fas fa-users"></i> Employees</a></li>
                 <li><a href="admin-attendance.html"><i class="fas fa-clock"></i> Attendance</a></li>
-                <li><a href="admin-leaves.html"><i class="fas fa-calendar-minus"></i> Leaves</a></li>
+                <li><a href="admin-leaves.html"><i class="fas fa-calendar-alt"></i> Leaves</a></li>
                 <li><a href="admin-tasks.html"><i class="fas fa-tasks"></i> Tasks</a></li>
             </ul>
-            <div class="sidebar-footer">
-                <a href="#" onclick="auth.logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
-            </div>
-        </nav>
+        </aside>
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <header>
-                <div class="menu-toggle">
-                    <i class="fas fa-bars"></i>
-                </div>
+        <main class="main-content">
+            <header class="top-bar">
+                <button class="menu-toggle"><i class="fas fa-bars"></i></button>
                 <div class="user-info">
                     <span>Admin User</span>
-                    <img src="" alt="Admin">
+                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=0D8ABC&color=fff" alt="Profile">
+                    <button onclick="auth.logout()" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
                 </div>
             </header>
 
-            <div class="content">
-                <h2>Admin Dashboard</h2>
-                <p class="text-muted" style="margin-bottom: 20px;">Overview of office activities</p>
+            <div class="content-wrapper">
+                <div class="page-header">
+                    <h2>Admin Dashboard</h2>
+                    <div class="header-actions" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <a class="btn btn-secondary" href="admin-employees.html"><i class="fas fa-users"></i> Manage Employees</a>
+                        <a class="btn btn-secondary" href="admin-tasks.html"><i class="fas fa-tasks"></i> Assign Tasks</a>
+                        <a class="btn btn-secondary" href="admin-leaves.html"><i class="fas fa-calendar-alt"></i> Review Leaves</a>
+                        <a class="btn btn-secondary" href="admin-attendance.html"><i class="fas fa-clock"></i> Attendance</a>
+                    </div>
+                </div>
 
                 <!-- Stats Cards -->
                 <div class="stats-grid">
@@ -84,19 +85,50 @@
                     </div>
                 </div>
 
-                <!-- Charts -->
-                <div class="charts-grid">
-                    <div class="chart-container">
-                        <h4>Department Distribution</h4>
-                        <canvas id="deptChart" height="250"></canvas>
+                <div class="row" style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 20px;">
+                    <div class="card" style="flex: 2; min-width: 300px;">
+                        <div class="card-header">
+                            <h3>Recent Tasks</h3>
+                            <a href="admin-tasks.html" class="btn btn-sm btn-primary">Manage</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table id="recentTasksTable" class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Task</th>
+                                        <th>Assigned To</th>
+                                        <th>Due Date</th>
+                                        <th>Priority</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
                     </div>
-                    <div class="chart-container">
-                        <h4>Task Status</h4>
-                        <canvas id="taskChart" height="250"></canvas>
+                    <div class="card" style="flex: 1; min-width: 280px;">
+                        <div class="card-header">
+                            <h3>Pending Leaves</h3>
+                            <a href="admin-leaves.html" class="btn btn-sm btn-primary">Review</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table id="pendingLeavesTable" class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Employee</th>
+                                        <th>Type</th>
+                                        <th>Dates</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </main>
+    </div>
     </div>
 
     <script src="script.js"></script>
@@ -104,7 +136,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             auth.checkAuth('admin');
             loadDashboardStats();
-            drawCharts();
+            loadLists();
         });
 
         function loadDashboardStats() {
@@ -126,96 +158,38 @@
             document.getElementById('activeTasks').textContent = activeTasks;
         }
 
-        function drawCharts() {
-            const employees = db.get(DATA_KEYS.EMPLOYEES);
-            const tasks = db.get(DATA_KEYS.TASKS);
+        async function loadLists() {
+            const tasks = await api.getTasks();
+            const recentTasks = tasks.slice(0, 6);
+            const taskColumns = [
+                { key: 'title' },
+                { key: 'assignedTo' },
+                { key: 'dueDate' },
+                { key: 'priority', render: (val) => {
+                    let color = '#6c757d';
+                    if (val === 'High') color = '#FF3B30';
+                    if (val === 'Medium') color = '#FFCC00';
+                    return `<span style="color: ${color}; font-weight: 600;">${val}</span>`;
+                }},
+                { key: 'status', render: (val) => {
+                    let badgeClass = 'badge-secondary';
+                    if (val === 'Completed') badgeClass = 'badge-success';
+                    if (val === 'In Progress') badgeClass = 'badge-primary';
+                    if (val === 'Pending' || val === 'To Do') badgeClass = 'badge-warning';
+                    return `<span class="badge ${badgeClass}">${val}</span>`;
+                }}
+            ];
+            ui.renderTable('recentTasksTable', recentTasks, taskColumns);
 
-            const depts = {};
-            employees.forEach(e => depts[e.dept] = (depts[e.dept] || 0) + 1);
-            
-            const taskStatus = {};
-            tasks.forEach(t => taskStatus[t.status] = (taskStatus[t.status] || 0) + 1);
-
-            drawBarChart('deptChart', depts);
-            drawPieChart('taskChart', taskStatus);
-        }
-
-        function drawBarChart(canvasId, data) {
-            const canvas = document.getElementById(canvasId);
-            const ctx = canvas.getContext('2d');
-            const dpr = window.devicePixelRatio || 1;
-            const rect = canvas.getBoundingClientRect();
-            canvas.width = rect.width * dpr;
-            canvas.height = rect.height * dpr;
-            ctx.scale(dpr, dpr);
-
-            const keys = Object.keys(data);
-            const values = Object.values(data);
-            const maxVal = Math.max(...values, 5);
-            
-            const padding = 40;
-            const barWidth = (rect.width - padding * 2) / keys.length - 10;
-            const chartHeight = rect.height - padding * 2;
-
-            keys.forEach((key, i) => {
-                const val = values[i];
-                const barHeight = (val / maxVal) * chartHeight;
-                const x = padding + i * (barWidth + 10);
-                const y = rect.height - padding - barHeight;
-
-                ctx.fillStyle = '#007bff';
-                ctx.fillRect(x, y, barWidth, barHeight);
-                
-                ctx.fillStyle = '#333';
-                ctx.font = '12px Roboto';
-                ctx.fillText(key, x, rect.height - padding + 15);
-                ctx.fillText(val, x + barWidth/2 - 5, y - 5);
-            });
-            
-            ctx.strokeStyle = '#ccc';
-            ctx.beginPath();
-            ctx.moveTo(padding, padding);
-            ctx.lineTo(padding, rect.height - padding);
-            ctx.lineTo(rect.width - padding, rect.height - padding);
-            ctx.stroke();
-        }
-
-        function drawPieChart(canvasId, data) {
-            const canvas = document.getElementById(canvasId);
-            const ctx = canvas.getContext('2d');
-            const dpr = window.devicePixelRatio || 1;
-            const rect = canvas.getBoundingClientRect();
-            canvas.width = rect.width * dpr;
-            canvas.height = rect.height * dpr;
-            ctx.scale(dpr, dpr);
-
-            const keys = Object.keys(data);
-            const values = Object.values(data);
-            const total = values.reduce((a, b) => a + b, 0);
-            
-            let startAngle = 0;
-            const colors = ['#28a745', '#ffc107', '#dc3545', '#17a2b8'];
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
-            const radius = Math.min(centerX, centerY) - 40;
-
-            keys.forEach((key, i) => {
-                const sliceAngle = (values[i] / total) * 2 * Math.PI;
-                
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
-                ctx.fillStyle = colors[i % colors.length];
-                ctx.fill();
-                
-                const legendX = rect.width - 100;
-                const legendY = 40 + i * 20;
-                ctx.fillRect(legendX, legendY, 10, 10);
-                ctx.fillStyle = '#333';
-                ctx.fillText(`${key} (${values[i]})`, legendX + 15, legendY + 10);
-
-                startAngle += sliceAngle;
-            });
+            const leaves = await api.getLeaves();
+            const pendingLeaves = leaves.filter(l => l.status === 'Pending').slice(0, 6);
+            const leaveColumns = [
+                { key: 'name' },
+                { key: 'type' },
+                { key: 'startDate', render: (val, item) => `${item.startDate} to ${item.endDate}` },
+                { key: 'status', render: (val) => `<span class="badge badge-warning">${val}</span>` }
+            ];
+            ui.renderTable('pendingLeavesTable', pendingLeaves, leaveColumns);
         }
     </script>
 </body>
