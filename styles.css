@@ -710,3 +710,65 @@ header, .top-bar {
         padding: 20px;
     }
 }
+
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    .sidebar,
+    header,
+    .top-bar,
+    .card,
+    .stat-card,
+    .kanban-column,
+    .modal,
+    .login-card {
+        background: rgba(255, 255, 255, 0.95);
+    }
+    .sidebar {
+        border-right: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    .card,
+    .stat-card,
+    .kanban-column,
+    .login-card {
+        box-shadow: var(--shadow-md);
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    :root {
+        --sidebar-width: 240px;
+        --header-height: 64px;
+    }
+    header, .top-bar {
+        padding: 0 30px;
+    }
+    .content, .content-wrapper {
+        padding: 20px 30px 40px;
+    }
+    .cards-grid, .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+    }
+    .kanban-board {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+}
+
+@media (min-width: 1025px) and (max-width: 1200px) {
+    :root {
+        --sidebar-width: 260px;
+    }
+    header, .top-bar {
+        padding: 0 36px;
+    }
+    .cards-grid, .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+    .kanban-board {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
