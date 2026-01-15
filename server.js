@@ -1,3 +1,21 @@
+/*
+  server.js - Minimal demo API for SmartOffice Pro
+
+  Overview:
+  - Provides a lightweight Express server that persists data to `data.json`.
+  - Endpoints implemented: /health, /employees, /tasks (GET/POST/PUT/PATCH/DELETE),
+    /leaves (GET/POST/PATCH)
+  - Intended for local development and prototyping. Not production-ready.
+
+  Run locally:
+    npm install
+    node server.js
+
+  Notes:
+  - Data is seeded on first run into `data.json`.
+  - Use `CONFIG.API_BASE` in the frontend to point to this server when available.
+*/
+
 const fs = require('fs');
 const path = require('path');
 const express = require('express');

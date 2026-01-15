@@ -9,6 +9,12 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!--
+        attendance.html
+        Purpose: General attendance page for viewing and marking attendance.
+        Structure: sidebar, header, search, attendance stats, and table.
+        Notes: Search and stats update functions are provided in `script.js` (filterAttendance).
+    -->
     <div class="wrapper">
         <!-- Sidebar -->
         <nav class="sidebar">
@@ -41,18 +47,58 @@
             </header>
 
             <div class="content">
-                <div class="table-header">
-                    <h2>Attendance Records</h2>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" id="searchInput" class="form-control" placeholder="Search employee..." style="width: 200px;">
+                <div class="page-header">
+                    <div>
+                        <h2>Attendance Records</h2>
+                        <p class="page-subtitle">Manage employee attendance and time tracking</p>
+                    </div>
+                    <div class="header-actions">
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="searchInput" placeholder="Search employee..." onkeyup="filterAttendance()">
+                        </div>
                         <button class="btn btn-primary" onclick="openModal()">
                             <i class="fas fa-plus"></i> Mark Attendance
                         </button>
                     </div>
                 </div>
 
+                <div class="attendance-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, rgba(52,199,89,0.2), rgba(52,199,89,0.1));">
+                            <i class="fas fa-user-check" style="color: var(--success-color);"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="presentCount">0</h3>
+                            <p>Present Today</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, rgba(255,59,48,0.2), rgba(255,59,48,0.1));">
+                            <i class="fas fa-user-slash" style="color: var(--danger-color);"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="absentCount">0</h3>
+                            <p>Absent Today</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, rgba(255,204,0,0.2), rgba(255,204,0,0.1));">
+                            <i class="fas fa-hourglass-end" style="color: var(--warning-color);"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="lateCount">0</h3>
+                            <p>Late Arrivals</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="table-container">
-                    <table id="attendanceTable">
+                    <div class="table-header-bar">
+                        <h3>Attendance Records</h3>
+                        <span id="recordCount" class="record-count">0 records</span>
+                    </div>
+                    <table id="attendanceTable" class="table">
                         <thead>
                             <tr>
                                 <th>Date</th>
@@ -67,6 +113,10 @@
                             <!-- Data populated by JS -->
                         </tbody>
                     </table>
+                    <div id="noResults" class="no-results" style="display: none;">
+                        <i class="fas fa-inbox"></i>
+                        <p>No attendance records found</p>
+                    </div>
                 </div>
             </div>
         </div>

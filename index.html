@@ -9,6 +9,14 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body class="login-body">
+    <!--
+        index.html - Login page
+        Structure:
+        - .login-container > centers the card on the page
+        - .login-card contains the login form and demo hints
+        - Uses `auth` helpers from script.js to perform client-side authentication
+        Note: This is a demo login. Replace with secure backend flow for production.
+    -->
     <div class="login-container">
         <div class="login-card">
             <div class="login-header">
@@ -39,6 +47,11 @@
     </div>
 
     <script src="script.js"></script>
+    <!--
+        Inline script wiring the login form on this page.
+        - Redirects immediately if a user is already stored in localStorage
+        - Calls `auth.login()` on submit; `auth` is defined in script.js
+    -->
     <script>
         // Redirect if already logged in
         document.addEventListener('DOMContentLoaded', () => {

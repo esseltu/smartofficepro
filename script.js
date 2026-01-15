@@ -1,5 +1,17 @@
-// Global State Management & Utilities
+/*
+    script.js - application client logic
 
+    Overview:
+    - Defines keys and mock data used for localStorage-backed persistence.
+    - Provides a small "db" wrapper around localStorage for get/set/init.
+    - Implements simple auth helpers (local-only) and UI helpers (sidebar, tables, modals).
+    - Contains an "api" layer that uses a configurable API base with localStorage fallback.
+    - Adds simple filtering and stats update helpers for pages (attendance, tasks, employees).
+
+    Use this file to understand how the UI is populated and where to hook real back-end calls.
+*/
+
+// Global State Management & Utilities
 const DATA_KEYS = {
     EMPLOYEES: 'smartoffice_employees',
     ATTENDANCE: 'smartoffice_attendance',
@@ -8,6 +20,8 @@ const DATA_KEYS = {
     CURRENT_USER: 'smartoffice_current_user'
 };
 
+// Mock data used to seed localStorage on first-run or when data needs refreshing.
+// Replace or remove when integrating a real backend.
 // Mock Data for Initialization
 const MOCK_DATA = {
     employees: [
@@ -34,13 +48,15 @@ const MOCK_DATA = {
     ]
 };
 
-// Data Access Layer
+// Simple data access layer wrapping localStorage. This keeps persistence logic centralized.
+// - get(key): returns parsed JSON array (or [] if missing)
+// - set(key, data): stringifies and stores data
+// - init(): seeds mock data when storage is empty or incompatible
 const db = {
     get: (key) => JSON.parse(localStorage.getItem(key)) || [],
     set: (key, data) => localStorage.setItem(key, JSON.stringify(data)),
     init: () => {
-        // Force update employees if needed (simple check if data is old/empty)
-        // Or if the first employee doesn't match our new structure (ID starting with CSC)
+        // If no employees exist (or the shape is old) seed mock data.
         const currentEmployees = JSON.parse(localStorage.getItem(DATA_KEYS.EMPLOYEES) || '[]');
         const needsUpdate = !currentEmployees.length || (currentEmployees[0] && !currentEmployees[0].id.startsWith('CSC'));
 
@@ -54,7 +70,9 @@ const db = {
     }
 };
 
-// Authentication & Session
+// Authentication & session helpers (client-side demo only)
+// NOTE: This is a simple localStorage-based auth purely for demo/testing.
+// Replace with secure backend auth before deploying to production.
 const auth = {
     // TODO: Replace with Firebase/Backend Auth
     login: (username, password, role) => {
@@ -85,6 +103,7 @@ const auth = {
     },
 
     logout: () => {
+        // Clear session and return to login page
         localStorage.removeItem(DATA_KEYS.CURRENT_USER);
         window.location.href = 'index.html';
     },
@@ -93,6 +112,7 @@ const auth = {
         return JSON.parse(localStorage.getItem(DATA_KEYS.CURRENT_USER));
     },
 
+    // checkAuth: ensures a user is logged in and optionally enforces role-based access
     checkAuth: (requiredRole) => {
         const user = auth.getCurrentUser();
         const currentPage = window.location.pathname.split('/').pop();
@@ -117,7 +137,11 @@ const auth = {
     }
 };
 
-// UI Helpers
+// UI helper utilities
+// - setupSidebar(): wire sidebar toggle and active link highlighting
+// - toggleModal(): show/hide modal elements
+// - renderTable(): lightweight table renderer used across pages
+// - updateUserInfo(): reflect current user in header/avatar
 const ui = {
     setupSidebar: () => {
         const menuToggle = document.querySelector('.menu-toggle');
@@ -157,6 +181,12 @@ const ui = {
         }
     },
 
+    // renderTable: populates a <table> body using a simple column spec
+    // parameters:
+    //  - tableId: id attribute of the table element
+    //  - data: array of objects to render
+    //  - columns: [{ key, render? }] where render is an optional function to format cell
+    //  - actionsCallback: optional function(item) returning HTML for actions cell
     renderTable: (tableId, data, columns, actionsCallback) => {
         const tbody = document.querySelector(`#${tableId} tbody`);
         if (!tbody) return;
@@ -191,6 +221,7 @@ const ui = {
         });
     },
 
+    // updateUserInfo: fills header name/avatar and applies sidebar variant for employees
     updateUserInfo: () => {
         const user = auth.getCurrentUser();
         if (user) {
@@ -207,12 +238,12 @@ const ui = {
     }
 };
 
-// Config for optional server sync
+// Config for optional server sync. If `CONFIG.API_BASE` is set, `api` will attempt network calls.
 const CONFIG = {
     API_BASE: localStorage.getItem('smartoffice_api_base') || ''
 };
 
-// Simple fetch helpers with graceful fallback
+// safeFetch: wrapper around fetch that returns `null` on error. Useful for optional remote API.
 async function safeFetch(url, options = {}) {
     try {
         const res = await fetch(url, options);
@@ -223,7 +254,8 @@ async function safeFetch(url, options = {}) {
     }
 }
 
-// Data Service for Tasks/Leaves with server fallback
+// `api` data service: attempts to use a remote API (if configured) and otherwise falls back
+// to localStorage via the `db` wrapper. It centralizes CRUD operations for tasks and leaves.
 const api = {
     getTasks: async (userId = null) => {
         if (CONFIG.API_BASE) {
@@ -345,9 +377,108 @@ const api = {
     }
 };
 
-// Initialize
+// Page-specific filter and stats helpers
+// These functions read from `db` and update the UI (table + stat cards)
+function filterAttendance() {
+    const searchInput = document.getElementById('searchInput')?.value.toLowerCase() || '';
+    const attendance = db.get(DATA_KEYS.ATTENDANCE);
+    const filtered = attendance.filter(record =>
+        record.name.toLowerCase().includes(searchInput) ||
+        record.employeeId.toLowerCase().includes(searchInput) ||
+        record.status.toLowerCase().includes(searchInput)
+    );
+    
+    updateAttendanceStats(filtered);
+    const columns = [
+        { key: 'date' },
+        { key: 'name' },
+        { key: 'status' },
+        { key: 'timeIn' },
+        { key: 'timeOut' }
+    ];
+    
+    ui.renderTable('attendanceTable', filtered, columns, (item) => {
+        return `<button class="btn btn-sm btn-warning" onclick="editAttendance('${item.date}', '${item.employeeId}')"><i class="fas fa-edit"></i> Edit</button>`;
+    });
+    
+    const noResults = document.getElementById('noResults');
+    if (filtered.length === 0) {
+        document.getElementById('attendanceTable').style.display = 'none';
+        if (noResults) noResults.style.display = 'flex';
+    } else {
+        document.getElementById('attendanceTable').style.display = 'table';
+        if (noResults) noResults.style.display = 'none';
+    }
+}
+
+function updateAttendanceStats(attendance) {
+    const presentCount = attendance.filter(a => a.status === 'Present').length;
+    const absentCount = attendance.filter(a => a.status === 'Absent').length;
+    const lateCount = attendance.filter(a => a.status === 'Late').length;
+    
+    const presentEl = document.getElementById('presentCount');
+    const absentEl = document.getElementById('absentCount');
+    const lateEl = document.getElementById('lateCount');
+    const countEl = document.getElementById('recordCount');
+    
+    if (presentEl) presentEl.textContent = presentCount;
+    if (absentEl) absentEl.textContent = absentCount;
+    if (lateEl) lateEl.textContent = lateCount;
+    if (countEl) countEl.textContent = `${attendance.length} record${attendance.length !== 1 ? 's' : ''}`;
+}
+
+function filterTasks() {
+    const searchInput = document.getElementById('searchInput')?.value.toLowerCase() || '';
+    const tasks = db.get(DATA_KEYS.TASKS);
+    const filtered = tasks.filter(task =>
+        task.title.toLowerCase().includes(searchInput) ||
+        task.assignedTo.toLowerCase().includes(searchInput) ||
+        task.priority.toLowerCase().includes(searchInput) ||
+        task.status.toLowerCase().includes(searchInput)
+    );
+    
+    updateTaskStats(filtered);
+    const columns = [
+        { key: 'title' },
+        { key: 'assignedTo' },
+        { key: 'dueDate' },
+        { key: 'priority', render: (val) => `<span class="badge badge-${val.toLowerCase()}">${val}</span>` },
+        { key: 'status', render: (val) => `<span class="badge badge-${val.toLowerCase().replace(' ', '')}">${val}</span>` }
+    ];
+    
+    ui.renderTable('tasksTable', filtered, columns, (item) => {
+        return `<button class="btn btn-sm btn-warning" onclick="editTask(${item.id})"><i class="fas fa-edit"></i> Edit</button>`;
+    });
+    
+    const noResults = document.getElementById('noResults');
+    if (filtered.length === 0) {
+        document.getElementById('tasksTable').style.display = 'none';
+        if (noResults) noResults.style.display = 'flex';
+    } else {
+        document.getElementById('tasksTable').style.display = 'table';
+        if (noResults) noResults.style.display = 'none';
+    }
+}
+
+function updateTaskStats(tasks) {
+    const totalCount = tasks.length;
+    const completedCount = tasks.filter(t => t.status === 'Completed').length;
+    const inProgressCount = tasks.filter(t => t.status === 'In Progress').length;
+    
+    const totalEl = document.getElementById('totalTasks');
+    const completedEl = document.getElementById('completedTasks');
+    const inProgressEl = document.getElementById('inProgressTasks');
+    const countEl = document.getElementById('taskCount');
+    
+    if (totalEl) totalEl.textContent = totalCount;
+    if (completedEl) completedEl.textContent = completedCount;
+    if (inProgressEl) inProgressEl.textContent = inProgressCount;
+    if (countEl) countEl.textContent = `${totalCount} task${totalCount !== 1 ? 's' : ''}`;
+}
+
+// Initialize: seed data and wire up common UI behavior on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
-    db.init();
-    ui.setupSidebar();
-    ui.updateUserInfo();
+    db.init();            // ensure mock data is present
+    ui.setupSidebar();    // sidebar toggling & active link
+    ui.updateUserInfo();  // populate header with current user info
 });

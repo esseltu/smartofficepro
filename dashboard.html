@@ -9,6 +9,12 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!--
+        dashboard.html
+        Purpose: Main overview dashboard with key metrics and charts.
+        Structure: sidebar navigation, floating header, stat cards and charts area.
+        Notes: Data is sourced from localStorage via `script.js` and can be synced to an API.
+    -->
     <div class="wrapper">
         <!-- Sidebar -->
         <nav class="sidebar">
@@ -41,8 +47,12 @@
             </header>
 
             <div class="content">
-                <h2>Dashboard Overview</h2>
-                <p class="text-muted" style="margin-bottom: 20px;">Welcome back, Admin</p>
+                <div class="page-header">
+                    <div>
+                        <h2>Dashboard Overview</h2>
+                        <p class="page-subtitle">Welcome back, Admin</p>
+                    </div>
+                </div>
 
                 <!-- Stats Cards -->
                 <div class="cards-grid">

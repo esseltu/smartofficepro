@@ -9,6 +9,12 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!--
+        employees.html
+        Purpose: Public/management employee directory and management UI.
+        Structure: sidebar, header, search, stats, employee table, and add/edit modal.
+        Notes: Table rendering uses `ui.renderTable`; form submits are handled in-page.
+    -->
     <div class="wrapper">
         <!-- Sidebar -->
         <nav class="sidebar">
@@ -41,15 +47,49 @@
             </header>
 
             <div class="content">
-                <div class="table-header">
-                    <h2>Manage Employees</h2>
-                    <button class="btn btn-primary" onclick="openModal()">
-                        <i class="fas fa-plus"></i> Add Employee
-                    </button>
+                <div class="page-header">
+                    <div>
+                        <h2>Manage Employees</h2>
+                        <p class="page-subtitle">Manage and organize your team members</p>
+                    </div>
+                    <div class="header-actions">
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="searchInput" placeholder="Search employees..." onkeyup="filterEmployees()">
+                        </div>
+                        <button class="btn btn-primary" onclick="openModal()">
+                            <i class="fas fa-plus"></i> Add Employee
+                        </button>
+                    </div>
+                </div>
+
+                <div class="employees-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, rgba(0,122,255,0.2), rgba(0,122,255,0.1));">
+                            <i class="fas fa-users" style="color: var(--primary-color);"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="totalEmployees">0</h3>
+                            <p>Total Employees</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, rgba(52,199,89,0.2), rgba(52,199,89,0.1));">
+                            <i class="fas fa-briefcase" style="color: var(--success-color);"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="departmentCount">0</h3>
+                            <p>Departments</p>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="table-container">
-                    <table id="employeesTable">
+                    <div class="table-header-bar">
+                        <h3>Employee Directory</h3>
+                        <span id="employeeCount" class="record-count">0 records</span>
+                    </div>
+                    <table id="employeesTable" class="table">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -65,6 +105,10 @@
                             <!-- Data populated by JS -->
                         </tbody>
                     </table>
+                    <div id="noResults" class="no-results" style="display: none;">
+                        <i class="fas fa-inbox"></i>
+                        <p>No employees found</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -122,6 +166,18 @@
 
         function loadEmployees() {
             const employees = db.get(DATA_KEYS.EMPLOYEES);
+            updateEmployeeStats(employees);
+            renderEmployeeTable(employees);
+        }
+
+        function updateEmployeeStats(employees) {
+            document.getElementById('totalEmployees').textContent = employees.length;
+            const departments = new Set(employees.map(e => e.dept));
+            document.getElementById('departmentCount').textContent = departments.size;
+            document.getElementById('employeeCount').textContent = `${employees.length} record${employees.length !== 1 ? 's' : ''}`;
+        }
+
+        function renderEmployeeTable(employees) {
             const columns = [
                 { key: 'id' },
                 { key: 'name' },
@@ -133,10 +189,34 @@
 
             renderTable('employeesTable', employees, columns, (item) => {
                 return `
-                    <button class="btn btn-sm btn-warning" onclick="editEmployee('${item.id}')"><i class="fas fa-edit"></i></button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteEmployee('${item.id}')"><i class="fas fa-trash"></i></button>
+                    <button class="btn btn-sm btn-warning" onclick="editEmployee('${item.id}')"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteEmployee('${item.id}')"><i class="fas fa-trash"></i> Delete</button>
                 `;
             });
+
+            const noResults = document.getElementById('noResults');
+            if (employees.length === 0) {
+                document.getElementById('employeesTable').style.display = 'none';
+                noResults.style.display = 'flex';
+            } else {
+                document.getElementById('employeesTable').style.display = 'table';
+                noResults.style.display = 'none';
+            }
+        }
+
+        function filterEmployees() {
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            const employees = db.get(DATA_KEYS.EMPLOYEES);
+            const filtered = employees.filter(emp => 
+                emp.id.toLowerCase().includes(searchInput) ||
+                emp.name.toLowerCase().includes(searchInput) ||
+                emp.dept.toLowerCase().includes(searchInput) ||
+                emp.position.toLowerCase().includes(searchInput) ||
+                emp.email.toLowerCase().includes(searchInput) ||
+                emp.phone.includes(searchInput)
+            );
+            updateEmployeeStats(filtered);
+            renderEmployeeTable(filtered);
         }
 
         function openModal(isEdit = false) {
