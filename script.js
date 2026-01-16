@@ -44,7 +44,7 @@ const MOCK_DATA = {
     ],
     tasks: [
         { id: 1, title: 'Update Website', assignedTo: 'Kwesi Essel Turkson', assignedToId: 'CSC/22/01/0011', dueDate: '2023-10-30', status: 'In Progress', priority: 'High' },
-        { id: 2, title: 'Payroll Processing', assignedTo: 'Theophilus Tettey Charwetey Martey', assignedToId: 'CSC/22/01/0217', dueDate: '2023-10-28', status: 'Pending', priority: 'Medium' },
+        { id: 2, title: 'Payroll Processing', assignedTo: 'Theophilus Tettey Charwetey Martey', assignedToId: 'CSC/22/01/0217', dueDate: '2023-10-28', status: 'Pending Acceptance', priority: 'Medium' },
         { id: 3, title: 'Recruitment Drive', assignedTo: 'Ellis Fafali Gbewordo', assignedToId: 'CSC/22/01/0349', dueDate: '2023-11-05', status: 'Completed', priority: 'High' },
         { id: 4, title: 'Fix Server Issue', assignedTo: 'Michelle Nana Akua Arhin', assignedToId: 'CSC/22/01/1073', dueDate: '2023-10-29', status: 'To Do', priority: 'High' }
     ],
@@ -267,6 +267,30 @@ async function safeFetch(url, options = {}) {
     }
 }
 
+// Auto-assign task to employee in department with least active tasks
+function autoAssignTask(department) {
+    const employees = db.get(DATA_KEYS.EMPLOYEES).filter(e => e.dept === department);
+    const tasks = db.get(DATA_KEYS.TASKS);
+    
+    // Count active tasks per employee (not completed)
+    const taskCounts = {};
+    employees.forEach(emp => {
+        taskCounts[emp.id] = tasks.filter(t => t.assignedToId === emp.id && t.status !== 'Completed').length;
+    });
+    
+    // Find employee with least tasks
+    let minTasks = Infinity;
+    let selectedEmployee = null;
+    employees.forEach(emp => {
+        if (taskCounts[emp.id] < minTasks) {
+            minTasks = taskCounts[emp.id];
+            selectedEmployee = emp;
+        }
+    });
+    
+    return selectedEmployee;
+}
+
 // `api` data service: attempts to use a remote API (if configured) and otherwise falls back
 // to localStorage via the `db` wrapper. It centralizes CRUD operations for tasks and leaves.
 const api = {
@@ -338,6 +362,33 @@ const api = {
             task.status = status;
             db.set(DATA_KEYS.TASKS, tasks);
             return task;
+        }
+        return null;
+    },
+
+    acceptTask: async (id) => {
+        return await api.updateTaskStatus(id, 'To Do');
+    },
+
+    declineTask: async (id) => {
+        // First, set to Declined
+        await api.updateTaskStatus(id, 'Declined');
+        // Then, reassign to next available
+        const tasks = db.get(DATA_KEYS.TASKS);
+        const task = tasks.find(t => t.id === id);
+        if (task) {
+            const employees = db.get(DATA_KEYS.EMPLOYEES);
+            const emp = employees.find(e => e.id === task.assignedToId);
+            if (emp) {
+                const newAssignee = autoAssignTask(emp.dept);
+                if (newAssignee && newAssignee.id !== task.assignedToId) {
+                    task.assignedToId = newAssignee.id;
+                    task.assignedTo = newAssignee.name;
+                    task.status = 'Pending Acceptance';
+                    db.set(DATA_KEYS.TASKS, tasks);
+                    return task;
+                }
+            }
         }
         return null;
     },

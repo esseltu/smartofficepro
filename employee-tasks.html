@@ -49,6 +49,17 @@
                 </div>
 
                 <div class="kanban-board">
+                    <!-- Pending Acceptance Column -->
+                    <div class="kanban-column" id="pending-column" ondrop="drop(event, 'Pending Acceptance')" ondragover="allowDrop(event)">
+                        <div class="kanban-header">
+                            <h4>Pending Acceptance</h4>
+                            <span class="badge badge-warning" id="count-pending">0</span>
+                        </div>
+                        <div class="kanban-items" id="list-pending">
+                            <!-- Tasks injected here -->
+                        </div>
+                    </div>
+
                     <!-- To Do Column -->
                     <div class="kanban-column" id="todo-column" ondrop="drop(event, 'To Do')" ondragover="allowDrop(event)">
                         <div class="kanban-header">
@@ -98,23 +109,26 @@
             if (!user) return;
 
             const tasks = await api.getTasks(user.id);
-            
+
             // Clear lists
+            document.getElementById('list-pending').innerHTML = '';
             document.getElementById('list-todo').innerHTML = '';
             document.getElementById('list-progress').innerHTML = '';
             document.getElementById('list-completed').innerHTML = '';
 
-            let counts = { 'To Do': 0, 'In Progress': 0, 'Completed': 0 };
+            let counts = { 'Pending Acceptance': 0, 'To Do': 0, 'In Progress': 0, 'Completed': 0 };
 
             tasks.forEach(task => {
                 const card = createKanbanCard(task);
-                
+
                 // Map status to column
-                // Default to 'To Do' if status is unknown or Pending
                 let status = task.status;
                 if (status === 'Pending') status = 'To Do';
-                
-                if (status === 'To Do') {
+
+                if (status === 'Pending Acceptance') {
+                    document.getElementById('list-pending').appendChild(card);
+                    counts['Pending Acceptance']++;
+                } else if (status === 'To Do') {
                     document.getElementById('list-todo').appendChild(card);
                     counts['To Do']++;
                 } else if (status === 'In Progress') {
@@ -127,6 +141,7 @@
             });
 
             // Update counts
+            document.getElementById('count-pending').textContent = counts['Pending Acceptance'];
             document.getElementById('count-todo').textContent = counts['To Do'];
             document.getElementById('count-progress').textContent = counts['In Progress'];
             document.getElementById('count-completed').textContent = counts['Completed'];
@@ -158,7 +173,12 @@
 
         function getButtonsForStatus(status, id) {
             // Helper buttons for mobile or non-drag users
-            if (status === 'Pending' || status === 'To Do') {
+            if (status === 'Pending Acceptance') {
+                return `
+                    <button class="btn-icon" onclick="acceptTask(${id})" title="Accept"><i class="fas fa-check"></i></button>
+                    <button class="btn-icon" onclick="declineTask(${id})" title="Decline" style="color: var(--danger-color)"><i class="fas fa-times"></i></button>
+                `;
+            } else if (status === 'Pending' || status === 'To Do') {
                 return `<button class="btn-icon" onclick="moveTask(${id}, 'In Progress')" title="Start"><i class="fas fa-play"></i></button>`;
             } else if (status === 'In Progress') {
                 return `
@@ -199,6 +219,16 @@
 
         async function updateTaskStatus(id, newStatus) {
             await api.updateTaskStatus(id, newStatus);
+            loadKanbanBoard();
+        }
+
+        async function acceptTask(id) {
+            await api.acceptTask(id);
+            loadKanbanBoard();
+        }
+
+        async function declineTask(id) {
+            await api.declineTask(id);
             loadKanbanBoard();
         }
     </script>

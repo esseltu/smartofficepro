@@ -89,9 +89,24 @@
                     <input type="text" id="taskTitle" class="form-control" required>
                 </div>
                 <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="autoAssign" onchange="toggleAssignmentMode()"> Auto-assign to department
+                    </label>
+                </div>
+                <div class="form-group" id="assigneeGroup">
                     <label>Assign To</label>
                     <select id="taskAssignee" class="form-control" required>
                         <!-- Populated via JS -->
+                    </select>
+                </div>
+                <div class="form-group" id="departmentGroup" style="display: none;">
+                    <label>Department</label>
+                    <select id="taskDepartment" class="form-control" required>
+                        <option value="">Select Department</option>
+                        <option value="IT">IT</option>
+                        <option value="HR">HR</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Marketing">Marketing</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -139,6 +154,8 @@
                     let badgeClass = 'badge-secondary';
                     if (val === 'Completed') badgeClass = 'badge-success';
                     if (val === 'In Progress') badgeClass = 'badge-primary';
+                    if (val === 'Pending Acceptance') badgeClass = 'badge-warning';
+                    if (val === 'Declined') badgeClass = 'badge-danger';
                     return `<span class="badge ${badgeClass}">${val}</span>`;
                 }}
             ];
@@ -166,7 +183,29 @@
             document.getElementById('modalTitle').textContent = 'Assign New Task';
             document.getElementById('taskForm').reset();
             document.getElementById('taskId').value = '';
+            document.getElementById('autoAssign').checked = false;
+            toggleAssignmentMode();
             ui.toggleModal('taskModal', true);
+        }
+
+        function toggleAssignmentMode() {
+            const autoAssign = document.getElementById('autoAssign').checked;
+            const assigneeGroup = document.getElementById('assigneeGroup');
+            const departmentGroup = document.getElementById('departmentGroup');
+            const assigneeSelect = document.getElementById('taskAssignee');
+            const departmentSelect = document.getElementById('taskDepartment');
+            
+            if (autoAssign) {
+                assigneeGroup.style.display = 'none';
+                departmentGroup.style.display = 'block';
+                assigneeSelect.required = false;
+                departmentSelect.required = true;
+            } else {
+                assigneeGroup.style.display = 'block';
+                departmentGroup.style.display = 'none';
+                assigneeSelect.required = true;
+                departmentSelect.required = false;
+            }
         }
 
         function editTask(id) {
@@ -176,6 +215,8 @@
                 document.getElementById('modalTitle').textContent = 'Edit Task';
                 document.getElementById('taskId').value = task.id;
                 document.getElementById('taskTitle').value = task.title;
+                document.getElementById('autoAssign').checked = false;
+                toggleAssignmentMode();
                 document.getElementById('taskAssignee').value = task.assignedToId;
                 document.getElementById('taskDueDate').value = task.dueDate;
                 document.getElementById('taskPriority').value = task.priority;
@@ -185,9 +226,23 @@
 
         async function handleTaskSubmit(e) {
             e.preventDefault();
+            const isAutoAssign = document.getElementById('autoAssign').checked;
             const employees = db.get(DATA_KEYS.EMPLOYEES);
-            const assigneeId = document.getElementById('taskAssignee').value;
-            const assigneeName = employees.find(e => e.id === assigneeId)?.name || 'Unknown';
+            let assigneeId, assigneeName;
+
+            if (isAutoAssign) {
+                const department = document.getElementById('taskDepartment').value;
+                const assignee = autoAssignTask(department);
+                if (!assignee) {
+                    alert('No employees available in selected department.');
+                    return;
+                }
+                assigneeId = assignee.id;
+                assigneeName = assignee.name;
+            } else {
+                assigneeId = document.getElementById('taskAssignee').value;
+                assigneeName = employees.find(e => e.id === assigneeId)?.name || 'Unknown';
+            }
 
             const task = {
                 id: document.getElementById('taskId').value ? parseInt(document.getElementById('taskId').value) : null,
@@ -198,10 +253,12 @@
                 priority: document.getElementById('taskPriority').value
             };
             
-            // Preserve status if editing, or default will be set in saveTask
+            // Preserve status if editing, or set to Pending Acceptance for auto-assigned new tasks
             if (task.id) {
                 const existing = api.getTasks().find(t => t.id === task.id);
                 if (existing) task.status = existing.status;
+            } else if (isAutoAssign) {
+                task.status = 'Pending Acceptance';
             }
 
             await api.saveTask(task);
