@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Admin - SmartOffice Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!--
+        admin-finance.html
+        Purpose: Administrative finance and budget management with approval workflows and reporting.
+        Structure: sidebar, header, budget distribution stats, expense table with approval controls.
+        Notes: Admin can view department budgets, approve expenses, and generate reports.
+    -->
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-building fa-lg"></i>
+                <h3>SmartOffice</h3>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="admin-dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li><a href="admin-employees.html"><i class="fas fa-users"></i> Employees</a></li>
+                <li><a href="admin-attendance.html"><i class="fas fa-clock"></i> Attendance</a></li>
+                <li><a href="admin-leaves.html"><i class="fas fa-calendar-minus"></i> Leaves</a></li>
+                <li><a href="admin-documents.html"><i class="fas fa-file-alt"></i> Documents</a></li>
+                <li><a href="admin-finance.html"><i class="fas fa-dollar-sign"></i> Finance</a></li>
+                <li><a href="admin-tasks.html"><i class="fas fa-tasks"></i> Tasks</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <header>
+                <div class="menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </div>
+                <div class="user-info">
+                    <span>Admin User</span>
+                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=0D8ABC&color=fff" alt="Admin">
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="page-header">
+                    <div>
+                        <h2>Finance & Budget Administration</h2>
+                        <p class="page-subtitle">Oversee budgets, approve expenses, and generate financial reports</p>
+                    </div>
+                    <div class="header-actions">
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="searchInput" placeholder="Search expenses..." onkeyup="filterExpenses()">
+                        </div>
+                        <button class="btn btn-primary" onclick="openModal()">
+                            <i class="fas fa-plus"></i> Add Expense
+                        </button>
+                        <button class="btn btn-secondary" onclick="downloadReport()">
+                            <i class="fas fa-download"></i> Report
+                        </button>
+                    </div>
+                </div>
+
+                <div class="finance-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, rgba(0,122,255,0.2), rgba(0,122,255,0.1));">
+                            <i class="fas fa-wallet" style="color: var(--primary-color);"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="totalBudget">$0</h3>
+                            <p>Total Budget Allocated</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, rgba(255,59,48,0.2), rgba(255,59,48,0.1));">
+                            <i class="fas fa-chart-line" style="color: var(--danger-color);"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="totalSpent">$0</h3>
+                            <p>Total Expenses</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, rgba(52,199,89,0.2), rgba(52,199,89,0.1));">
+                            <i class="fas fa-piggy-bank" style="color: var(--success-color);"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="remaining">$0</h3>
+                            <p>Remaining Budget</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, rgba(255,204,0,0.2), rgba(255,204,0,0.1));">
+                            <i class="fas fa-hourglass-end" style="color: var(--warning-color);"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="pending">0</h3>
+                            <p>Pending Approvals</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header-bar">
+                        <h3>All Expense Records</h3>
+                        <span id="expenseCount" class="record-count">0 expenses</span>
+                    </div>
+                    <table id="financeTable" class="table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th>Description</th>
+                                <th>Department</th>
+                                <th>Submitted By</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data populated by JS -->
+                        </tbody>
+                    </table>
+                    <div id="noResults" class="no-results" style="display: none;">
+                        <i class="fas fa-inbox"></i>
+                        <p>No expense records found</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Expense Modal -->
+    <div id="financeModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="toggleModal('financeModal', false)">&times;</span>
+            <h3 id="modalTitle" style="margin-bottom: 20px;">Add Expense</h3>
+            <form id="financeForm">
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="expenseDate" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="expenseCategory" class="form-control" required>
+                        <option value="Salaries">Salaries</option>
+                        <option value="Equipment">Equipment</option>
+                        <option value="Office Supplies">Office Supplies</option>
+                        <option value="Travel">Travel</option>
+                        <option value="Training">Training</option>
+                        <option value="Utilities">Utilities</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Department</label>
+                    <select id="expenseDept" class="form-control" required>
+                        <option value="IT">IT</option>
+                        <option value="HR">HR</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Sales">Sales</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Submitted By</label>
+                    <input type="text" id="expenseSubmittedBy" class="form-control" placeholder="Employee name">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="expenseDesc" class="form-control" rows="2" placeholder="Brief description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Amount ($)</label>
+                    <input type="number" id="expenseAmount" class="form-control" step="0.01" placeholder="0.00" required>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="expenseStatus" class="form-control">
+                        <option value="Pending">Pending</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Rejected">Rejected</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Save Expense</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Approval Modal -->
+    <div id="approvalModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="toggleModal('approvalModal', false)">&times;</span>
+            <h3 style="margin-bottom: 20px;">Approve/Reject Expense</h3>
+            <div id="approvalDetails" style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.05); border-radius: 8px;">
+                <!-- Details populated by JS -->
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-success" onclick="updateExpenseStatus('Approved')">
+                    <i class="fas fa-check"></i> Approve
+                </button>
+                <button class="btn btn-danger" onclick="updateExpenseStatus('Rejected')">
+                    <i class="fas fa-times"></i> Reject
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        let currentExpenseId = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadExpenses();
+            document.getElementById('expenseDate').valueAsDate = new Date();
+            document.getElementById('financeForm').addEventListener('submit', handleExpenseSubmit);
+        });
+
+        function loadExpenses() {
+            const expenses = db.get(DATA_KEYS.FINANCES) || [];
+            updateFinanceStats(expenses);
+            renderExpenseTable(expenses);
+        }
+
+        function updateFinanceStats(expenses) {
+            const totalBudget = 100000;
+            const totalSpent = expenses.filter(e => e.status === 'Approved').reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+            const pending = expenses.filter(e => e.status === 'Pending').length;
+            const remaining = totalBudget - totalSpent;
+
+            document.getElementById('totalBudget').textContent = '$' + totalBudget.toLocaleString();
+            document.getElementById('totalSpent').textContent = '$' + totalSpent.toLocaleString();
+            document.getElementById('remaining').textContent = '$' + remaining.toLocaleString();
+            document.getElementById('pending').textContent = pending;
+            document.getElementById('expenseCount').textContent = `${expenses.length} expense${expenses.length !== 1 ? 's' : ''}`;
+        }
+
+        function renderExpenseTable(expenses) {
+            const columns = [
+                { key: 'date' },
+                { key: 'category' },
+                { key: 'description' },
+                { key: 'department' },
+                { key: 'submittedBy', render: (val) => val || 'N/A' },
+                { key: 'amount', render: (val) => '$' + parseFloat(val).toLocaleString() },
+                { key: 'status', render: (val) => `<span class="badge badge-${val.toLowerCase()}">${val}</span>` }
+            ];
+
+            ui.renderTable('financeTable', expenses, columns, (item) => {
+                return `
+                    <button class="btn btn-sm btn-info" onclick="approveExpense('${item.id}')"><i class="fas fa-check-circle"></i> Review</button>
+                    <button class="btn btn-sm btn-warning" onclick="editExpense('${item.id}')"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteExpense('${item.id}')"><i class="fas fa-trash"></i> Delete</button>
+                `;
+            });
+
+            const noResults = document.getElementById('noResults');
+            if (expenses.length === 0) {
+                document.getElementById('financeTable').style.display = 'none';
+                noResults.style.display = 'flex';
+            } else {
+                document.getElementById('financeTable').style.display = 'table';
+                noResults.style.display = 'none';
+            }
+        }
+
+        function filterExpenses() {
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            const expenses = db.get(DATA_KEYS.FINANCES) || [];
+            const filtered = expenses.filter(exp =>
+                exp.category.toLowerCase().includes(searchInput) ||
+                exp.description.toLowerCase().includes(searchInput) ||
+                exp.department.toLowerCase().includes(searchInput)
+            );
+            updateFinanceStats(filtered);
+            renderExpenseTable(filtered);
+        }
+
+        function openModal() {
+            document.getElementById('modalTitle').textContent = 'Add Expense';
+            document.getElementById('financeForm').reset();
+            document.getElementById('expenseDate').valueAsDate = new Date();
+            currentExpenseId = null;
+            toggleModal('financeModal', true);
+        }
+
+        function editExpense(id) {
+            const expenses = db.get(DATA_KEYS.FINANCES) || [];
+            const exp = expenses.find(e => e.id === id);
+            if (exp) {
+                document.getElementById('modalTitle').textContent = 'Edit Expense';
+                document.getElementById('expenseDate').value = exp.date;
+                document.getElementById('expenseCategory').value = exp.category;
+                document.getElementById('expenseDept').value = exp.department;
+                document.getElementById('expenseSubmittedBy').value = exp.submittedBy || '';
+                document.getElementById('expenseDesc').value = exp.description;
+                document.getElementById('expenseAmount').value = exp.amount;
+                document.getElementById('expenseStatus').value = exp.status;
+                currentExpenseId = id;
+                toggleModal('financeModal', true);
+            }
+        }
+
+        function approveExpense(id) {
+            const expenses = db.get(DATA_KEYS.FINANCES) || [];
+            const exp = expenses.find(e => e.id === id);
+            if (exp) {
+                currentExpenseId = id;
+                const details = `
+                    <p><strong>Category:</strong> ${exp.category}</p>
+                    <p><strong>Department:</strong> ${exp.department}</p>
+                    <p><strong>Description:</strong> ${exp.description}</p>
+                    <p><strong>Amount:</strong> $${parseFloat(exp.amount).toLocaleString()}</p>
+                    <p><strong>Current Status:</strong> ${exp.status}</p>
+                `;
+                document.getElementById('approvalDetails').innerHTML = details;
+                toggleModal('approvalModal', true);
+            }
+        }
+
+        function updateExpenseStatus(status) {
+            const expenses = db.get(DATA_KEYS.FINANCES) || [];
+            const exp = expenses.find(e => e.id === currentExpenseId);
+            if (exp) {
+                exp.status = status;
+                db.set(DATA_KEYS.FINANCES, expenses);
+                toggleModal('approvalModal', false);
+                loadExpenses();
+                showNotification(`Expense ${status.toLowerCase()} successfully`, 'success');
+            }
+        }
+
+        function handleExpenseSubmit(e) {
+            e.preventDefault();
+            
+            const date = document.getElementById('expenseDate').value;
+            const category = document.getElementById('expenseCategory').value;
+            const department = document.getElementById('expenseDept').value;
+            const submittedBy = document.getElementById('expenseSubmittedBy').value;
+            const description = document.getElementById('expenseDesc').value;
+            const amount = document.getElementById('expenseAmount').value;
+            const status = document.getElementById('expenseStatus').value;
+            
+            let expenses = db.get(DATA_KEYS.FINANCES) || [];
+            
+            if (currentExpenseId) {
+                const exp = expenses.find(e => e.id === currentExpenseId);
+                if (exp) {
+                    exp.date = date;
+                    exp.category = category;
+                    exp.department = department;
+                    exp.submittedBy = submittedBy;
+                    exp.description = description;
+                    exp.amount = amount;
+                    exp.status = status;
+                }
+            } else {
+                const newExpense = {
+                    id: Date.now().toString(),
+                    date,
+                    category,
+                    department,
+                    submittedBy,
+                    description,
+                    amount,
+                    status
+                };
+                expenses.push(newExpense);
+            }
+            
+            db.set(DATA_KEYS.FINANCES, expenses);
+            toggleModal('financeModal', false);
+            loadExpenses();
+            showNotification('Expense saved successfully', 'success');
+        }
+
+        function deleteExpense(id) {
+            if (confirm('Are you sure you want to delete this expense?')) {
+                let expenses = db.get(DATA_KEYS.FINANCES) || [];
+                expenses = expenses.filter(e => e.id !== id);
+                db.set(DATA_KEYS.FINANCES, expenses);
+                loadExpenses();
+                showNotification('Expense deleted successfully', 'success');
+            }
+        }
+
+        function downloadReport() {
+            const expenses = db.get(DATA_KEYS.FINANCES) || [];
+            const totalBudget = 100000;
+            const totalSpent = expenses.filter(e => e.status === 'Approved').reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+            
+            let report = 'FINANCIAL REPORT\n\n';
+            report += `Generated: ${new Date().toLocaleDateString()}\n\n`;
+            report += `Total Budget: $${totalBudget.toLocaleString()}\n`;
+            report += `Total Spent: $${totalSpent.toLocaleString()}\n`;
+            report += `Remaining: $${(totalBudget - totalSpent).toLocaleString()}\n`;
+            report += `Budget Usage: ${((totalSpent / totalBudget) * 100).toFixed(1)}%\n\n`;
+            report += 'EXPENSE DETAILS:\n';
+            expenses.forEach(exp => {
+                report += `${exp.date} | ${exp.category} | ${exp.department} | $${parseFloat(exp.amount).toLocaleString()} | ${exp.status}\n`;
+            });
+            
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(report));
+            element.setAttribute('download', 'financial_report_' + new Date().getTime() + '.txt');
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
+    </script>
+</body>
+</html>

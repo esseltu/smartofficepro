@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documents - SmartOffice Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!--
+        documents.html
+        Purpose: Central document management and storage for the organization.
+        Structure: sidebar, header, search, document stats, and document table with upload modal.
+        Notes: Document CRUD is handled in `script.js` with optional API fallback.
+    -->
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-building fa-lg"></i>
+                <h3>SmartOffice</h3>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li><a href="employees.html"><i class="fas fa-users"></i> Employees</a></li>
+                <li><a href="attendance.html"><i class="fas fa-clock"></i> Attendance</a></li>
+                <li><a href="leaves.html"><i class="fas fa-calendar-minus"></i> Leaves</a></li>
+                <li><a href="documents.html"><i class="fas fa-file-alt"></i> Documents</a></li>
+                <li><a href="finance.html"><i class="fas fa-dollar-sign"></i> Finance</a></li>
+                <li><a href="tasks.html"><i class="fas fa-tasks"></i> Tasks</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <header>
+                <div class="menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </div>
+                <div class="user-info">
+                    <span>Admin User</span>
+                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=0D8ABC&color=fff" alt="Admin">
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="page-header">
+                    <div>
+                        <h2>Document Management</h2>
+                        <p class="page-subtitle">Securely store and retrieve office documents</p>
+                    </div>
+                    <div class="header-actions">
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="searchInput" placeholder="Search documents..." onkeyup="filterDocuments()">
+                        </div>
+                        <button class="btn btn-primary" onclick="openModal()">
+                            <i class="fas fa-upload"></i> Upload Document
+                        </button>
+                    </div>
+                </div>
+
+                <div class="document-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, rgba(0,122,255,0.2), rgba(0,122,255,0.1));">
+                            <i class="fas fa-file" style="color: var(--primary-color);"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="totalDocuments">0</h3>
+                            <p>Total Documents</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, rgba(52,199,89,0.2), rgba(52,199,89,0.1));">
+                            <i class="fas fa-folder" style="color: var(--success-color);"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="categoryCount">0</h3>
+                            <p>Categories</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header-bar">
+                        <h3>Documents</h3>
+                        <span id="documentCount" class="record-count">0 documents</span>
+                    </div>
+                    <table id="documentsTable" class="table">
+                        <thead>
+                            <tr>
+                                <th>File Name</th>
+                                <th>Category</th>
+                                <th>Uploaded By</th>
+                                <th>Upload Date</th>
+                                <th>Size</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data populated by JS -->
+                        </tbody>
+                    </table>
+                    <div id="noResults" class="no-results" style="display: none;">
+                        <i class="fas fa-inbox"></i>
+                        <p>No documents found</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Document Modal -->
+    <div id="documentModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="toggleModal('documentModal', false)">&times;</span>
+            <h3 id="modalTitle" style="margin-bottom: 20px;">Upload Document</h3>
+            <form id="documentForm">
+                <div class="form-group">
+                    <label>File Name</label>
+                    <input type="text" id="fileName" class="form-control" placeholder="e.g., Q4-Report.pdf" required>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="fileCategory" class="form-control" required>
+                        <option value="Reports">Reports</option>
+                        <option value="Policies">Policies</option>
+                        <option value="HR">HR Documents</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Projects">Projects</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="fileDescription" class="form-control" rows="3" placeholder="Brief description of the document"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Upload Document</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDocuments();
+            document.getElementById('documentForm').addEventListener('submit', handleDocumentSubmit);
+        });
+
+        function loadDocuments() {
+            const documents = db.get(DATA_KEYS.DOCUMENTS) || [];
+            updateDocumentStats(documents);
+            renderDocumentTable(documents);
+        }
+
+        function updateDocumentStats(documents) {
+            document.getElementById('totalDocuments').textContent = documents.length;
+            const categories = new Set(documents.map(d => d.category));
+            document.getElementById('categoryCount').textContent = categories.size;
+            document.getElementById('documentCount').textContent = `${documents.length} document${documents.length !== 1 ? 's' : ''}`;
+        }
+
+        function renderDocumentTable(documents) {
+            const columns = [
+                { key: 'fileName' },
+                { key: 'category' },
+                { key: 'uploadedBy' },
+                { key: 'uploadDate' },
+                { key: 'size' }
+            ];
+
+            ui.renderTable('documentsTable', documents, columns, (item) => {
+                return `
+                    <button class="btn btn-sm" style="background: var(--primary-color); color: white;" onclick="downloadDocument('${item.id}')"><i class="fas fa-download"></i> Download</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteDocument('${item.id}')"><i class="fas fa-trash"></i> Delete</button>
+                `;
+            });
+
+            const noResults = document.getElementById('noResults');
+            if (documents.length === 0) {
+                document.getElementById('documentsTable').style.display = 'none';
+                noResults.style.display = 'flex';
+            } else {
+                document.getElementById('documentsTable').style.display = 'table';
+                noResults.style.display = 'none';
+            }
+        }
+
+        function filterDocuments() {
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            const documents = db.get(DATA_KEYS.DOCUMENTS) || [];
+            const filtered = documents.filter(doc =>
+                doc.fileName.toLowerCase().includes(searchInput) ||
+                doc.category.toLowerCase().includes(searchInput) ||
+                doc.uploadedBy.toLowerCase().includes(searchInput)
+            );
+            updateDocumentStats(filtered);
+            renderDocumentTable(filtered);
+        }
+
+        function openModal() {
+            document.getElementById('modalTitle').textContent = 'Upload Document';
+            document.getElementById('documentForm').reset();
+            toggleModal('documentModal', true);
+        }
+
+        function handleDocumentSubmit(e) {
+            e.preventDefault();
+            
+            const fileName = document.getElementById('fileName').value;
+            const category = document.getElementById('fileCategory').value;
+            const description = document.getElementById('fileDescription').value;
+            
+            let documents = db.get(DATA_KEYS.DOCUMENTS) || [];
+            const user = auth.getCurrentUser();
+            
+            const newDoc = {
+                id: Date.now().toString(),
+                fileName,
+                category,
+                description,
+                uploadedBy: user ? user.name : 'System',
+                uploadDate: new Date().toISOString().split('T')[0],
+                size: '2.5 MB' // Mock size
+            };
+            
+            documents.push(newDoc);
+            db.set(DATA_KEYS.DOCUMENTS, documents);
+            toggleModal('documentModal', false);
+            loadDocuments();
+            showNotification('Document uploaded successfully');
+        }
+
+        function deleteDocument(id) {
+            if (confirm('Are you sure you want to delete this document?')) {
+                let documents = db.get(DATA_KEYS.DOCUMENTS) || [];
+                documents = documents.filter(d => d.id !== id);
+                db.set(DATA_KEYS.DOCUMENTS, documents);
+                loadDocuments();
+                showNotification('Document deleted successfully', 'success');
+            }
+        }
+
+        function downloadDocument(id) {
+            const documents = db.get(DATA_KEYS.DOCUMENTS) || [];
+            const doc = documents.find(d => d.id === id);
+            if (doc) {
+                showNotification(`Downloading: ${doc.fileName}`);
+                // In a real app, this would trigger an actual file download
+            }
+        }
+    </script>
+</body>
+</html>

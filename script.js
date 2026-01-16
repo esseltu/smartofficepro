@@ -17,6 +17,8 @@ const DATA_KEYS = {
     ATTENDANCE: 'smartoffice_attendance',
     LEAVES: 'smartoffice_leaves',
     TASKS: 'smartoffice_tasks',
+    DOCUMENTS: 'smartoffice_documents',
+    FINANCES: 'smartoffice_finances',
     CURRENT_USER: 'smartoffice_current_user'
 };
 
@@ -45,6 +47,16 @@ const MOCK_DATA = {
         { id: 2, title: 'Payroll Processing', assignedTo: 'Theophilus Tettey Charwetey Martey', assignedToId: 'CSC/22/01/0217', dueDate: '2023-10-28', status: 'Pending', priority: 'Medium' },
         { id: 3, title: 'Recruitment Drive', assignedTo: 'Ellis Fafali Gbewordo', assignedToId: 'CSC/22/01/0349', dueDate: '2023-11-05', status: 'Completed', priority: 'High' },
         { id: 4, title: 'Fix Server Issue', assignedTo: 'Michelle Nana Akua Arhin', assignedToId: 'CSC/22/01/1073', dueDate: '2023-10-29', status: 'To Do', priority: 'High' }
+    ],
+    documents: [
+        { id: '1', fileName: 'Employee-Handbook.pdf', category: 'Policies', description: 'Company employee handbook and guidelines', visibility: 'Company', uploadedBy: 'Admin User', uploadDate: '2023-10-01', size: '3.2 MB' },
+        { id: '2', fileName: 'Q3-Financial-Report.pdf', category: 'Finance', description: 'Q3 2023 financial performance report', visibility: 'Private', uploadedBy: 'Admin User', uploadDate: '2023-10-15', size: '5.1 MB' },
+        { id: '3', fileName: 'Project-Charter.docx', category: 'Projects', description: 'New project initiative charter and scope', visibility: 'Department', uploadedBy: 'Ellis Fafali Gbewordo', uploadDate: '2023-10-20', size: '1.8 MB' }
+    ],
+    finances: [
+        { id: '1', date: '2023-10-15', category: 'Salaries', department: 'IT', description: 'October payroll processing', amount: '15000', status: 'Approved', submittedBy: 'Admin User', versionHistory: [] },
+        { id: '2', date: '2023-10-18', category: 'Equipment', department: 'IT', description: 'Laptop purchases for new hires', amount: '3500', status: 'Pending', submittedBy: 'Michelle Nana Akua Arhin', versionHistory: [] },
+        { id: '3', date: '2023-10-20', category: 'Training', department: 'HR', description: 'Professional development courses', amount: '2500', status: 'Approved', submittedBy: 'Ellis Fafali Gbewordo', versionHistory: [] }
     ]
 };
 
@@ -66,6 +78,7 @@ const db = {
             db.set(DATA_KEYS.ATTENDANCE, MOCK_DATA.attendance);
             db.set(DATA_KEYS.LEAVES, MOCK_DATA.leaves);
             db.set(DATA_KEYS.TASKS, MOCK_DATA.tasks);
+            db.set(DATA_KEYS.DOCUMENTS, MOCK_DATA.documents);
         }
     }
 };

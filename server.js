@@ -52,6 +52,11 @@ function readData() {
         { id: 2, title: 'Payroll Processing', assignedTo: 'Theophilus Tettey Charwetey Martey', assignedToId: 'CSC/22/01/0217', dueDate: '2023-10-28', status: 'Pending', priority: 'Medium' },
         { id: 3, title: 'Recruitment Drive', assignedTo: 'Ellis Fafali Gbewordo', assignedToId: 'CSC/22/01/0349', dueDate: '2023-11-05', status: 'Completed', priority: 'High' },
         { id: 4, title: 'Fix Server Issue', assignedTo: 'Michelle Nana Akua Arhin', assignedToId: 'CSC/22/01/1073', dueDate: '2023-10-29', status: 'To Do', priority: 'High' }
+      ],
+      documents: [
+        { id: '1', fileName: 'Employee-Handbook.pdf', category: 'Policies', description: 'Company employee handbook and guidelines', visibility: 'Company', uploadedBy: 'Admin User', uploadDate: '2023-10-01', size: '3.2 MB' },
+        { id: '2', fileName: 'Q3-Financial-Report.pdf', category: 'Finance', description: 'Q3 2023 financial performance report', visibility: 'Private', uploadedBy: 'Admin User', uploadDate: '2023-10-15', size: '5.1 MB' },
+        { id: '3', fileName: 'Project-Charter.docx', category: 'Projects', description: 'New project initiative charter and scope', visibility: 'Department', uploadedBy: 'Ellis Fafali Gbewordo', uploadDate: '2023-10-20', size: '1.8 MB' }
       ]
     };
     fs.writeFileSync(DATA_PATH, JSON.stringify(seed, null, 2));
@@ -148,6 +153,76 @@ app.patch('/leaves/:id/status', (req, res) => {
   leave.status = req.body.status;
   writeData(data);
   res.json(leave);
+});
+
+// Documents
+app.get('/documents', (req, res) => {
+  const data = readData();
+  res.json(data.documents || []);
+});
+
+app.post('/documents', (req, res) => {
+  const data = readData();
+  if (!data.documents) data.documents = [];
+  const doc = req.body;
+  doc.id = Date.now().toString();
+  data.documents.push(doc);
+  writeData(data);
+  res.status(201).json(doc);
+});
+
+app.delete('/documents/:id', (req, res) => {
+  const data = readData();
+  const id = req.params.id;
+  if (data.documents) {
+    data.documents = data.documents.filter(d => d.id !== id);
+    writeData(data);
+  }
+  res.status(204).end();
+});
+
+// Finances
+app.get('/finances', (req, res) => {
+  const data = readData();
+  res.json(data.finances || []);
+});
+
+app.post('/finances', (req, res) => {
+  const data = readData();
+  if (!data.finances) data.finances = [];
+  const expense = req.body;
+  expense.id = Date.now().toString();
+  expense.versionHistory = expense.versionHistory || [];
+  data.finances.push(expense);
+  writeData(data);
+  res.status(201).json(expense);
+});
+
+app.put('/finances/:id', (req, res) => {
+  const data = readData();
+  const id = req.params.id;
+  const expense = data.finances.find(e => e.id === id);
+  if (!expense) return res.status(404).json({ error: 'Not found' });
+  
+  // Track version history for document versioning support
+  if (expense.versionHistory && expense.versionHistory.length > 0) {
+    expense.versionHistory.push({
+      timestamp: new Date().toISOString(),
+      previousData: { ...expense }
+    });
+  }
+  
+  Object.assign(expense, req.body);
+  writeData(data);
+  res.json(expense);
+});
+
+app.delete('/finances/:id', (req, res) => {
+  const data = readData();
+  const id = req.params.id;
+  data.finances = data.finances.filter(e => e.id !== id);
+  writeData(data);
+  res.status(204).end();
 });
 
 app.listen(PORT, () => {
